@@ -171,3 +171,10 @@ These assertions should be latched and reset at appropriate times.  For
 example: Ready[Out] must remain asserted until the component is no longer
 affected by state changes on the data bus.
 
+When two components are both asynchronous, there is no reason to encode and
+decode the output between them.  For example, the binary adder above may be
+connected to an instruction pipeline which itself encodes and decodes the
+data, or which itself only interfaces with asynchronous components.  In such
+a case, the decoding delay is zero and the validation delay is greater than
+zero.  Such a configuration would need to convert when leaving its domain,
+such as when sending data to memory or peripherals.
