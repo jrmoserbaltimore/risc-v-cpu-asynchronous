@@ -1,23 +1,29 @@
 -- 2 hot 2 handle
 --
 -- Handles encoding and decoding into 1-hot interfaces.
+--
+-- A one-hot bit is specified as such:
+--
+--   d : std_logic_vector(1 downto 0);
+--
+--   d = "00" -- NULL
+--   d = "10" -- 0, note d(1) = '1', d(0) <= '0'
+--   d = "01" -- 1
 library IEEE;
 use IEEE.std_logic_1164.all;
 
 -- One-hot encoder/decoder entitites
 entity one_hot_encoder is
 	port(
-	input  : in  std_logic;
-	d0     : out std_logic;
-	d1     : out std_logic
+	input  : (in)  std_logic;
+	d      : (out) std_logic_vector(1 downto 0)
 	);
 end one_hot_encoder;
 
 entity one_hot_decoder is
 	port(
-	d0     : in  std_logic;
-	d1     : in  std_logic;
-	output : out std_logic
+	d      : (in)  std_logic_vector(1 downto 0);
+	output : (out) std_logic
 	);
 end one_hot_decoder;
 
@@ -38,29 +44,24 @@ end one_hot_decoder;
 -- completion detection.
 entity one_hot_logic is
 	port(
-	A0      : in  std_logic;
-	A1      : in  std_logic;
-	B0      : in  std_logic;
-	B1      : in  std_logic;
-	output0 : out std_logic;
-	output1 : out std_logic
+	A      : (in)  std_logic_vector(1 downto 0);
+	B      : (in)  std_logic_vector(1 downto 0);
+	output : (out) std_logic_vector(1 downto 0)
 	);
 end one_hot_logic;
 
 entity one_hot_inverter is
 	port(
-	d0      : in  std_logic;
-	d1      : in  std_logic;
-	output0 : out std_logic;
-	output1 : out std_logic
+	d      : (in)  std_logic_vector(1 downto 0);
+	output : (out) std_logic_vector(1 downto 0)
 	);
 end one_hot_inverter;
--- Architecture for encoder
 
+-- Architecture for encoder
 architecture one_hot_encoder_arc of one_hot_encoder is
 begin
-	d0 <= NOT input;
-	d1 <= input;
+	d(1) <= NOT input;
+	d(0) <= input;
 end one_hot_encoder_arc;
 
 -- Architecture for decoder
@@ -83,7 +84,7 @@ end one_hot_encoder_arc;
 -- an incomplete case, d1 is equivalent.
 architecture one_hot_decoder_arc of one_hot_decoder is
 begin
-	output <= d1;
+	output <= d(0);
 end one_hot_decoder_arc;
 
 -- Architecture for completion check
@@ -103,7 +104,7 @@ end one_hot_decoder_arc;
 -- decoder.
 architecture one_hot_completion_arc of one_hot_decoder is
 begin
-	output <= d0 XOR d1;
+	output <= d(0) XOR d(1);
 end one_hot_completion_arc;
 
 -- Logical comparisons
@@ -118,7 +119,7 @@ end one_hot_completion_arc;
 --
 -- Note the single-bit truth tables for each line:
 --
---  d0              d1
+-- d(1)            d(0)
 -- A B  AND  NAND  A B  AND  NAND   One-Hot AND
 -- 1 1   1     0   0 0   0    1      [1 0] = 0
 -- 1 0   0     1   0 1   0    1      [1 0] = 0
@@ -127,46 +128,54 @@ end one_hot_completion_arc;
 --
 -- The one-hot AND is thus exclusively:
 --
--- [A1 NAND B1, A1 AND B1]
+-- [A(0) NAND B(0), A(0) AND B(0)]
 architecture one_hot_and of one_hot_logic is
 begin
-	process
+	-- Clear outputs
+	reset: process (A,B)
 	begin
-		-- Clear outputs
-		output0 <= '0';
-		output1 <= '0';
+		if (A = "00" OR B = "00") then
+			output <= "00";
+		end if;
+	end process reset;
+
+	compare: process(A,B)
+	begin
 		-- Wait for [0 1] or [1 0]
 		-- FIXME: replace these with one_hot_completion
-		wait until A0 XOR A1 = '1' and B0 XOR B1 = '1';
-		-- See truth table above
-		output0 <= A1 NAND B1;
-		output1 <= A1 AND B1;
-		-- Wait until one of the inputs is gone before
-		-- clearing outputs
-		wait until (A0 XOR A1 = '0') OR (B0 XOR B1 = '0')
-	end process;
+		if ((A(0) XOR A(1) = '1')
+	 	AND (B(0) XOR B(1) = '1')) then
+			-- See truth table above
+			output(1) <= A(0) NAND B(0);
+			output(0) <= A(0) AND B(0);
+		end if;
+	end process compare;
 end architecture one_hot_and;
 
 -- Direct NAND in one-hot logic.  Inverse of AND.
 -- Inverse of AND is exclusively:
 --
--- [A1 AND B1, A1 NAND B1]
+-- [A(0) AND B(0), A(0) NAND B(0)]
 architecture one_hot_nand of one_hot_logic is
 begin
-	process
+	reset: process (A,B)
 	begin
-		-- Clear outputs
-		output0 <= '0';
-		output1 <= '0';
+		if (A = "00" OR B = "00") then
+			output <= "00";
+		end if;
+	end process reset;
+
+	compare: process(A,B)
+	begin
 		-- Wait for [0 1] or [1 0]
-		wait until A0 XOR A1 = '1' and B0 XOR B1 = '1';
-		-- See truth table above
-		output0 <= A1 AND B1;
-		output1 <= A1 NAND B1;
-		-- Wait until one of the inputs is gone before
-		-- clearing outputs
-		wait until (A0 XOR A1 = '0') OR (B0 XOR B1 = '0')
-	end process;
+		-- FIXME: replace these with one_hot_completion
+		if ((A(0) XOR A(1) = '1')
+	 	AND (B(0) XOR B(1) = '1')) then
+			-- See truth table above
+			output(1) <= A(0) AND B(0);
+			output(0) <= A(0) NAND B(0);
+		end if;
+	end process compare;
 end architecture one_hot_nand;
 
 -- Direct OR in one-hot logic.  Truth table:
@@ -178,6 +187,7 @@ end architecture one_hot_nand;
 --
 -- Note the single-bit truth tables for each line:
 --
+-- d(1)            d(0)
 -- A B  AND  NAND  A B  AND  NAND   One-Hot OR
 -- 1 1   1     0   0 0   0    1      [1 0] = 0
 -- 1 0   0     1   0 1   0    1      [0 1] = 1
@@ -186,45 +196,53 @@ end architecture one_hot_nand;
 --
 -- The one-hot OR is thus exclusively:
 --
--- [A0 AND B0, A0 NAND B0]
+-- [A(1) AND B(1), A(1) NAND B(1)]
 architecture one_hot_or of one_hot_logic is
 begin
-	process
+	reset: process (A,B)
 	begin
-		-- Clear outputs
-		output0 <= '0';
-		output1 <= '0';
+		if (A = "00" OR B = "00") then
+			output <= "00";
+		end if;
+	end process reset;
+
+	compare: process(A,B)
+	begin
 		-- Wait for [0 1] or [1 0]
-		wait until A0 XOR A1 = '1' and B0 XOR B1 = '1';
-		-- See truth table above
-		output0 <= A0 AND B0;
-		output1 <= A0 NAND B0;
-		-- Wait until one of the inputs is gone before
-		-- clearing outputs
-		wait until (A0 XOR A1 = '0') OR (B0 XOR B1 = '0')
-	end process;
+		-- FIXME: replace these with one_hot_completion
+		if ((A(0) XOR A(1) = '1')
+	 	AND (B(0) XOR B(1) = '1')) then
+			-- See truth table above
+			output(1) <= A(1) AND B(1);
+			output(0) <= A(1) NAND B(1);
+		end if;
+	end process compare;
 end architecture one_hot_or;
 
 -- Direct NOR in one-hot logic.  Inverse of AND.
 -- Inverse of OR is exclusively:
 --
--- [A0 NAND B0, A0 AND B0]
+-- [A(1) NAND B(1), A(1) AND B(1)]
 architecture one_hot_nor of one_hot_logic is
 begin
-	process
+	reset: process (A,B)
 	begin
-		-- Clear outputs
-		output0 <= '0';
-		output1 <= '0';
+		if (A = "00" OR B = "00") then
+			output <= "00";
+		end if;
+	end process reset;
+
+	compare: process(A,B)
+	begin
 		-- Wait for [0 1] or [1 0]
-		wait until A0 XOR A1 = '1' and B0 XOR B1 = '1';
-		-- See truth table above
-		output0 <= A0 NAND B0;
-		output1 <= A0 AND B0;
-		-- Wait until one of the inputs is gone before
-		-- clearing outputs
-		wait until (A0 XOR A1 = '0') OR (B0 XOR B1 = '0')
-	end process;
+		-- FIXME: replace these with one_hot_completion
+		if ((A(0) XOR A(1) = '1')
+	 	AND (B(0) XOR B(1) = '1')) then
+			-- See truth table above
+			output(1) <= A(1) NAND B(1);
+			output(0) <= A(1) AND B(1);
+		end if;
+	end process compare;
 end architecture one_hot_nor;
 
 -- Direct XOR in one-hot logic.  Truth table:
@@ -236,6 +254,7 @@ end architecture one_hot_nor;
 --
 -- Note the single-bit truth tables for each line:
 --
+-- d(1)            d(0)
 -- A B  XOR  XNOR  A B  XOR  XNOR  One-Hot XOR
 -- 1 1   0     1   0 0   0    1      [1 0] = 0
 -- 1 0   1     0   0 1   1    0      [0 1] = 1
@@ -244,63 +263,71 @@ end architecture one_hot_nor;
 --
 -- The one-hot XOR is any of the following:
 --
--- [A1 XNOR B0, A0 XOR B0]
--- [A1 XNOR B1, A1 XOR B1]
+-- [A(n) XNOR B(n), A(m) XOR B(m)]
+--
+-- m can equal n.
 architecture one_hot_xor of one_hot_logic is
 begin
-	process
+	reset: process (A,B)
 	begin
-		-- Clear outputs
-		output0 <= '0';
-		output1 <= '0';
+		if (A = "00" OR B = "00") then
+			output <= "00";
+		end if;
+	end process reset;
+
+	compare: process(A,B)
+	begin
 		-- Wait for [0 1] or [1 0]
-		wait until A0 XOR A1 = '1' and B0 XOR B1 = '1';
-		-- See truth table above
-		output0 <= A0 XNOR B0;
-		output1 <= A0 XOR B0;
-		-- Wait until one of the inputs is gone before
-		-- clearing outputs
-		wait until (A0 XOR A1 = '0') OR (B0 XOR B1 = '0')
-	end process;
+		-- FIXME: replace these with one_hot_completion
+		if ((A(0) XOR A(1) = '1')
+	 	AND (B(0) XOR B(1) = '1')) then
+			-- See truth table above
+			output(1) <= A(0) XNOR B(0);
+			output(0) <= A(0) XOR B(0);
+		end if;
+	end process compare;
 end architecture one_hot_xor;
 
 -- Direct XNOR in one-hot logic.  Inverse of XOR.
 -- Inverse of XOR is any of:
 --
--- [A0 XOR B0, A0 XNOR B0]
--- [A1 XOR B1, A1 XNOR B1]
+-- [A(n) XOR B(n), A(m) XNOR B(m)]
 architecture one_hot_xnor of one_hot_logic is
 begin
-	process
+	reset: process (A,B)
 	begin
-		-- Clear outputs
-		output0 <= '0';
-		output1 <= '0';
+		if (A = "00" OR B = "00") then
+			output <= "00";
+		end if;
+	end process reset;
+
+	compare: process(A,B)
+	begin
 		-- Wait for [0 1] or [1 0]
-		wait until A0 XOR A1 = '1' and B0 XOR B1 = '1';
-		-- See truth table above
-		output0 <= A0 XOR B0;
-		output1 <= A0 XNOR B0;
-		-- Wait until one of the inputs is gone before
-		-- clearing outputs
-		wait until (A0 XOR A1 = '0') OR (B0 XOR B1 = '0')
-	end process;
+		-- FIXME: replace these with one_hot_completion
+		if ((A(0) XOR A(1) = '1')
+	 	AND (B(0) XOR B(1) = '1')) then
+			-- See truth table above
+			output(1) <= A(0) XOR B(0);
+			output(0) <= A(0) XNOR B(0);
+		end if;
+	end process compare;
 end architecture one_hot_xnor;
 
 architecture one_hot_not of one_hot_inverter is
 begin
-	process
+	reset: process (A)
 	begin
-		-- Clear outputs
-		output0 <= '0';
-		output1 <= '0';
+		if (A = "00") then
+			output <= "00";
+		end if;
+	end process reset;
+
+	invert: process (A)
+	begin
 		-- Wait for [0 1] or [1 0]
-		wait until A0 XOR A1 = '1' and B0 XOR B1 = '1';
-		-- invert
-		output0 <= NOT d0;
-		output1 <= NOT d1;
-		-- Wait until one of the inputs is gone before
-		-- clearing outputs
-		wait until (A0 XOR A1 = '0') OR (B0 XOR B1 = '0')
-	end process;
+		if (A(0) XOR A(1) = '1') then
+			output = NOT A;
+		end if;
+	end process invert;
 end architecture one_hot_not;

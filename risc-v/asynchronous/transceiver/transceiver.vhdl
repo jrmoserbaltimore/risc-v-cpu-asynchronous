@@ -43,8 +43,8 @@ begin
 	process(clk)
 	begin
 		if (rising_edge(clk)) then
-			dout[0] <= NOT din;
-			dout[1] <= din;
+			dout(1) <= NOT din;
+			dout(0) <= din;
 		end if;
 		if (falling_edge(clk)) then
 			dout <= "00";
@@ -57,8 +57,8 @@ begin
 	process(clk)
 	begin
 		if (rising_edge(clk)) then
-			if (din[0] XOR din[1] = '1') then
-			dout <= din[1];
+			if (din(0) XOR din(1) = '1') then
+			dout <= din(0);
 			S    <= '1';
 		end if;
 		if (falling_edge(clk)) then

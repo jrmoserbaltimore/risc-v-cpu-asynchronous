@@ -29,20 +29,15 @@ use IEEE.std_logic_1164.all;
 -- Parallel prefix adder sends P to an XOR gate along with Cin
 -- (final output from last stage, so it has the same interface.
 -- In architecture, G would be sent to Cout, P sent to MUX.
-entity binary_adder_onehot is
+entity binary_adder_onehot_entity is
 port(
-	A0    : (in)  std_logic;
-        A1    : (in)  std_logic;
-	B0    : (in)  std_logic;
-	B1    : (in)  std_logic;
-	Cin0  : (in)  std_logic;
-	Cin1  : (in)  std_logic;
-	Cout0 : (out) std_logic;
-	Cout1 : (out) std_logic;
-        S0    : (out) std_logic;
-        S1    : (out) std_logic;
+	A     : (in)  std_logic_vector(1 downto 0);
+	B     : (in)  std_logic_vector(1 downto 0);
+	Cin   : (in)  std_logic_vector(1 downto 0);
+	Cout  : (out) std_logic_vector(1 downto 0);
+        S     : (out) std_logic_vector(1 downto 0);
     );
-end binary_adder_onehot;
+end binary_adder_onehot_entity;
 
 -- There are two forms of this.  All but the last for a given
 -- bit are as follows:
@@ -64,23 +59,48 @@ end binary_adder_onehot;
 --  XOR
 --   |
 --  Gout
-entity binary_adder_pg_mux_onehot is
+entity binary_adder_pg_mux_onehot_entity is
 port (
-	P0    : (in)  std_logic;
-	P1    : (in)  std_logic;
-	G0    : (in)  std_logic;
-	G1    : (in)  std_logic;
-	Pin0  : (in)  std_logic;
-	Pin1  : (in)  std_logic;
-	Gin0  : (in)  std_logic;
-	Gin1  : (in)  std_logic;
-	Pout0 : (out) std_logic;
-	Pout1 : (out) std_logic;
-	Gout0 : (out) std_logic;
-	Gout1 : (out) std_logic;
+	P     : (in)  std_logic_vector(1 downto 0);
+	G     : (in)  std_logic_vector(1 downto 0);
+	Pin   : (in)  std_logic_vector(1 downto 0);
+	Gin   : (in)  std_logic_vector(1 downto 0);
+	Pout  : (out) std_logic_vector(1 downto 0);
+	Gout  : (out) std_logic_vector(1 downto 0);
     );
-end binary_adder_pg_mux;
+end binary_adder_pg_mux_entity;
 
-architecture binary_adder_onehot_arch of binary_adder_onehot is
+-- A simple full adder.
+architecture binary_adder_onehot_fulladder_arch of binary_adder_onehot_entity is
+	signal Aready, Bready, Cinready : std_logic;
+	signal ABa, ABx, Sbit, Coutbit : std_logic;
 begin
-end binary_adder_oneht_arch;
+	-- Initialize when any inputs are null
+	reset process(A,B,Cin)
+	begin
+		if (A = "00"
+		 OR B = "00"
+		 OR Cin = "00") then
+			Cout  <= "00";
+			S     <= "00";
+		end if;
+	end process reset;
+
+	-- Add when none are null
+	adder process(A,B,Cin)
+	begin
+		if ((A(0) XOR A(1) = '1')
+		AND (B(0) XOR B(1) = '1')
+		AND (Cin(0) XOR Cin(1) = '1')) then
+		-- Full adder
+		ABx      <= A(0) XOR B(0);
+		ABa      <= A(0) AND B(0);
+		Sbit     <= ABx XOR Cin(0);
+		Coutbit  <= (ABx AND Cin(0)) OR ABa;
+                -- FIXME: Use an encoder component
+		S(0)     <= S;
+		S(1)     <= NOT S;
+		Cout(0)  <= Cout;
+		Cout(1)  <= NOT Cout;
+	end process;
+end binary_adder_onehot_fulladder_arch;
