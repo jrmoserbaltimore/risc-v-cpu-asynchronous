@@ -1,4 +1,4 @@
--- Synchronous interfacing
+-- Synchronous-Asynchronous Transceiver 
 --
 -- Connects to/from a synchronous interface.
 --
@@ -21,24 +21,24 @@
 library IEEE;
 use IEEE.std_logic_1164.all;
 
-entity synchronous_input_entity is
+entity transceiver_input_entity is
 	port(
 	clk   : in  std_logic;
 	din   : in  std_logic;
 	dout  : out std_logic_vector(1 downto 0);
 	);
-end synchronous_input_entity;
+end transceiver_input_entity;
 
-entity synchronous_output_entity is
+entity transceiver_output_entity is
 	port(
 	clk   : in  std_logic;
 	din   : in  std_logic_vector(1 downto 0);
 	dout  : out std_logic;
 	S     : out std_logic;
 	);
-end synchronous_output_entity;
+end transceiver_output_entity;
 
-architecture synchronous_input_arch of synchronous_input_entity is
+architecture transceiver_input_arch of transceiver_input_entity is
 begin
 	read: process(clk)
 	begin
@@ -50,9 +50,9 @@ begin
 			dout <= "00";
 		end if;
 	end process read;
-end synchronous_input_arch;
+end transceiver_input_arch;
 
-architecture synchronous_output_arch of synchronous_output_entity is
+architecture transceiver_output_arch of transceiver_output_entity is
 begin
 	read: process(clk)
 	begin
@@ -65,4 +65,4 @@ begin
 			S <= '0';
 		end if;
 	end process read;
-end synchronous_output_arch;
+end transceiver_output_arch;
