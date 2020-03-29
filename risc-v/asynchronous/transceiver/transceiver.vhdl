@@ -21,26 +21,26 @@
 library IEEE;
 use IEEE.std_logic_1164.all;
 
-entity transceiver_input_entity is
+entity transceiver_from_sync_entity is
 	port(
 	clk   : in  std_logic;
 	din   : in  std_logic;
 	dout  : out std_logic_vector(1 downto 0);
 	);
-end transceiver_input_entity;
+end transceiver_from_sync_entity;
 
-entity transceiver_output_entity is
+entity transceiver_to_sync_entity is
 	port(
 	clk   : in  std_logic;
 	din   : in  std_logic_vector(1 downto 0);
 	dout  : out std_logic;
 	S     : out std_logic;
 	);
-end transceiver_output_entity;
+end transceiver_to_sync_entity;
 
-architecture transceiver_input_arch of transceiver_input_entity is
+architecture transceiver_from_sync_arch of transceiver_from_sync_entity is
 begin
-	read: process(clk)
+	process(clk)
 	begin
 		if (rising_edge(clk)) then
 			dout[0] <= NOT din;
@@ -49,12 +49,12 @@ begin
 		if (falling_edge(clk)) then
 			dout <= "00";
 		end if;
-	end process read;
-end transceiver_input_arch;
+	end process;
+end transceiver_from_sync_arch;
 
-architecture transceiver_output_arch of transceiver_output_entity is
+architecture transceiver_to_sync_arch of transceiver_to_sync_entity is
 begin
-	read: process(clk)
+	process(clk)
 	begin
 		if (rising_edge(clk)) then
 			if (din[0] XOR din[1] = '1') then
@@ -64,5 +64,5 @@ begin
 		if (falling_edge(clk)) then
 			S <= '0';
 		end if;
-	end process read;
-end transceiver_output_arch;
+	end process;
+end transceiver_to_sync_arch;

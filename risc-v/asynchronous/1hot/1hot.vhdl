@@ -130,7 +130,7 @@ end one_hot_completion_arc;
 -- [A1 NAND B1, A1 AND B1]
 architecture one_hot_and of one_hot_logic is
 begin
-	and_proc: process(A0, A1, B0, B1) is
+	process
 	begin
 		-- Clear outputs
 		output0 <= '0';
@@ -144,7 +144,7 @@ begin
 		-- Wait until one of the inputs is gone before
 		-- clearing outputs
 		wait until (A0 XOR A1 = '0') OR (B0 XOR B1 = '0')
-	end process and_proc;
+	end process;
 end architecture one_hot_and;
 
 -- Direct NAND in one-hot logic.  Inverse of AND.
@@ -153,7 +153,7 @@ end architecture one_hot_and;
 -- [A1 AND B1, A1 NAND B1]
 architecture one_hot_nand of one_hot_logic is
 begin
-	nand_proc: process(A0, A1, B0, B1) is
+	process
 	begin
 		-- Clear outputs
 		output0 <= '0';
@@ -166,7 +166,7 @@ begin
 		-- Wait until one of the inputs is gone before
 		-- clearing outputs
 		wait until (A0 XOR A1 = '0') OR (B0 XOR B1 = '0')
-	end process nand_proc;
+	end process;
 end architecture one_hot_nand;
 
 -- Direct OR in one-hot logic.  Truth table:
@@ -189,7 +189,7 @@ end architecture one_hot_nand;
 -- [A0 AND B0, A0 NAND B0]
 architecture one_hot_or of one_hot_logic is
 begin
-	or_proc: process(A0, A1, B0, B1) is
+	process
 	begin
 		-- Clear outputs
 		output0 <= '0';
@@ -202,7 +202,7 @@ begin
 		-- Wait until one of the inputs is gone before
 		-- clearing outputs
 		wait until (A0 XOR A1 = '0') OR (B0 XOR B1 = '0')
-	end process or_proc;
+	end process;
 end architecture one_hot_or;
 
 -- Direct NOR in one-hot logic.  Inverse of AND.
@@ -211,7 +211,7 @@ end architecture one_hot_or;
 -- [A0 NAND B0, A0 AND B0]
 architecture one_hot_nor of one_hot_logic is
 begin
-	nor_proc: process(A0, A1, B0, B1) is
+	process
 	begin
 		-- Clear outputs
 		output0 <= '0';
@@ -224,7 +224,7 @@ begin
 		-- Wait until one of the inputs is gone before
 		-- clearing outputs
 		wait until (A0 XOR A1 = '0') OR (B0 XOR B1 = '0')
-	end process nor_proc;
+	end process;
 end architecture one_hot_nor;
 
 -- Direct XOR in one-hot logic.  Truth table:
@@ -248,7 +248,7 @@ end architecture one_hot_nor;
 -- [A1 XNOR B1, A1 XOR B1]
 architecture one_hot_xor of one_hot_logic is
 begin
-	xor_proc: process(A0, A1, B0, B1) is
+	process
 	begin
 		-- Clear outputs
 		output0 <= '0';
@@ -261,7 +261,7 @@ begin
 		-- Wait until one of the inputs is gone before
 		-- clearing outputs
 		wait until (A0 XOR A1 = '0') OR (B0 XOR B1 = '0')
-	end process xor_proc;
+	end process;
 end architecture one_hot_xor;
 
 -- Direct XNOR in one-hot logic.  Inverse of XOR.
@@ -271,7 +271,7 @@ end architecture one_hot_xor;
 -- [A1 XOR B1, A1 XNOR B1]
 architecture one_hot_xnor of one_hot_logic is
 begin
-	xnor_proc: process(A0, A1, B0, B1) is
+	process
 	begin
 		-- Clear outputs
 		output0 <= '0';
@@ -284,12 +284,12 @@ begin
 		-- Wait until one of the inputs is gone before
 		-- clearing outputs
 		wait until (A0 XOR A1 = '0') OR (B0 XOR B1 = '0')
-	end process xnor_proc;
+	end process;
 end architecture one_hot_xnor;
 
 architecture one_hot_not of one_hot_inverter is
 begin
-	not_proc: process(d0, d1) is
+	process
 	begin
 		-- Clear outputs
 		output0 <= '0';
@@ -302,5 +302,5 @@ begin
 		-- Wait until one of the inputs is gone before
 		-- clearing outputs
 		wait until (A0 XOR A1 = '0') OR (B0 XOR B1 = '0')
-	end process not_proc;
+	end process;
 end architecture one_hot_not;
