@@ -4,6 +4,27 @@ Asynchronous CPU Components
 These CPU components are asynchronous.  They include adders, dividers,
 pipelines, and other features.
 
+# Architecture
+
+Ultimately, this RISC-V implementation will use an entirely asynchronous
+architecture.  This consumes significant area, largely due to routing;
+however, routing is between directly-attached components generally, and
+should not be a problem in and of itself.
+
+In general, an Asynchronous CPU operates in a synchronous system as below:
+```
+       __________________________________________________________
+      |   _______________             ________________________   |
+  CLK-|--|  Transceiver  |=Handshake=| Asynchronous circuitry |  |
+D0..n=|==|               |=D[0]0..n==|                        |  |
+      |  |               |=D[1]0..n==|                        |  |
+      |  |_______________|           |________________________|  |
+      |__________________________________________________________|
+```
+Above, a transceiver operates as a clocked (synchronous) component and an
+unclocked (asynchronous) component.  The asynchronous side experiences delay
+controlled by the clock, but uses the asynchronous protocol.
+
 # Handshake
 
 A completion-detection handshake allows for delay-insensitive components.
