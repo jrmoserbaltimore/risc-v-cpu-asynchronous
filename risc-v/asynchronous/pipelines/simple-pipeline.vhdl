@@ -1,0 +1,14 @@
+-- pipeline
+--
+-- A pipeline component carries out a particular stage in a pipeline.
+-- The component provides stage-to-stage synchronization.
+--
+-- In this way, the pipeline is clockless.  The pipeline may rely on external
+-- clocked components and so may in practice wait for those.
+--
+-- Note that the pipelined component must handle all interdependencies.  If
+-- an operation relies on a prior operation completing, it must coordinate
+-- with the further stages of the pipeline.  For example:  if an instruction
+-- decodes with a write, the write must be notated in some kind of semaphore
+-- system, and reads and writes must stall.
+--

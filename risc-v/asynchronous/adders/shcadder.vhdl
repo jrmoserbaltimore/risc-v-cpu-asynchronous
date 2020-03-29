@@ -1,0 +1,77 @@
+-- Speculative Han-Carlson adder
+--
+-- A one-bit full adder looks as below:
+--
+--   S    <= A XOR B XOR Cin
+--   Cout <= (A AND B) OR (B AND Cin) OR (Cin AND A)
+--
+-- A different adder uses three circuits.
+--
+-- Adder:
+--
+--   A     : (in)
+--   B     : (in)
+--   G     : (out)
+--   P     : (out)
+--   G     <= A AND B
+--   P     <= A XOR B
+--
+-- Propagate:
+--
+--   Gin   : (in)
+--   Pin   : (in)
+--   Cin   : (in)
+--   PCin  : (in)
+--   Gout  <= (Pin AND Cin) XOR Gin
+--   Pout  <= Pin AND PCin
+--
+-- Sum bit:
+--
+--   Pin   : (in)
+--   Cin   : (in)
+--   S     : (out)
+--   S     <= Pin XOR Cin
+--
+-- P from the Adder goes to the Sum bit.  Gout from the Adder goes to
+-- Cin on the NEXT Propagator.  The final propagated Gout goes to Cin on
+-- the NEXT Sum bit.
+--
+-- These propagate forward a bunch, creating a complex mess.  Han-Carlson
+-- simply shortcuts some of this:
+--
+-- For every even bit, Gout and Pout from the final Propagate cycle begin
+-- forwarding to PCin in the next stage at each power of two.  That is:
+-- Bit 0 sends its (G,P) from Input to Stage 1 of bit 1, which sends its
+-- (G,P) from Stage 1 to Stage 2 of Bit 3, which sends its (G,P) from 
+-- Stage 2 to Stage 3 of Bit 7, and so forth.  In the final stage, the
+-- odd bits propagate their (P,G) to the outputs.
+--
+-- Each bit has to propagate to each other bit.  At Stage 1, Bit 1
+-- propagates to Stage 2 of Bit 3; at Stage 2, Bit 1 propagates to Stage
+-- 3 of Bit 5.  This is because Stage 3 of Bit 3 propagates to Stage 4 of
+-- Bit 7, and so Bit 5 carries no information about Bit 1!  Notably, Bit 2
+-- propagates to 3, then 5, but this propagation does not bring any
+-- information about Bit 1.  The final stage propagates Bit 1 to Bit 2,
+-- which is the first time Bit 2 receives information about Bit 1.
+--
+-- Speculative Han-Carlson skips the propagation stage before the last.
+-- For a 16-bit adder, Bit 7 Stage 3 never propagates to Bit 15 Stage 4;
+-- rather it directly propagates to Bit 8 output.
+--
+-- Just before the output stage, speculative Han-Carlson tests all the
+-- odd-numbered bits:
+--
+--   D     : (in) [15 downto 0]
+--   Error : (out)
+--   Error <= ((D[1] AND D[9]) XOR (D[3] AND D[11])) XOR
+--            ((D[5] AND D[13]) XOR (D[7] AND [D15]))
+--
+-- When an error is detected, the last stage is computed.  Errors are
+-- fairly infrequent, so the fast path usually occurs.  The adder also
+-- reduces the amount of space needed.
+--
+-- Each component can also use a two-way state signal rather than the
+-- adder running on a clock.  This essentially propagates a "done"
+-- signal.  Such an adder can begin computing new addition before prior
+-- signals have fully propagated and effectively pipeline additions.
+
