@@ -27,6 +27,13 @@ The dx1 bit is just the input, while the dx0 bit is the input inverted, as
 shown in the encoding table above.  Note that `1`-bits propagate slightly
 faster than `0` bits if the NOT introduces delay.
 
+A `0` input gives `[1 0]`, while a `1` gives `[0 1]`.  While switching from
+`1` to `0` is flawless, a glitch occurs switching from `0` to `1`:  the `1`
+can propagate and produce `[1 1]` outputs.  To handle this glitch, validation
+circuits must treat `[1 1]` identically to `[0 0]`, which is easy: `A XOR B`
+gives `1` if valid and `0` if `NULL` or invalid, so take `A XOR B = 1` as
+completion.
+
 The single-bit decoder looks as such:
 ```
 Theoretical    Optimized
@@ -38,8 +45,8 @@ INPUT          INPUT
         |
       OUTPUT
 ```
-The optimized decoder will `wait until d0 XOR d1 = '1'` before sending `d1` to
-`OUTPUT`.
+The optimized decoder uses no gates.  In either case, the component using
+the decoder must validate completion before considering the output valid. 
 
 Consider a two-bit adder, as below:
 ```
