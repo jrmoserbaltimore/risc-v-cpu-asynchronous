@@ -4,7 +4,7 @@ Asynchronous CPU Components
 These CPU components are asynchronous.  They include adders, dividers,
 pipelines, and other features.
 
-# Architecture
+# Major Architecture
 
 Ultimately, this RISC-V implementation will use an entirely asynchronous
 architecture.  This consumes significant area, largely due to routing;
@@ -27,32 +27,7 @@ controlled by the clock, but uses the asynchronous protocol.
 
 # Handshake
 
-A completion-detection handshake allows for delay-insensitive components.
-
-Consider a component shaped as below:
-```
-  ______________________________
--| Ready  (out)   Ready    (in) |-
--| Waiting (in)   Waiting (out) |-
-=| d[0..x] (in)   d[0..x] (out) |=
- |______________________________|
-```
-The above has a data input and a data output.  Another component with the same
-interface would send and received data over the same interface.
-
-This allows only the transitions below:
-```
-W[in]   R[out]   Transition
-1       1        R[out] <= 0
-0       0        R[out] <= 1
-
-R[in]   W[out]   Transition
-1       0        W[out] <= 1
-0       1        W[out] <= 0
-```
-
-The initialization  state is `W[out]=0, R[out]=X`, with `R[out]` transitioning
-to `1` when ready.  To be more clear:
+A completion-detection handshake allows for delay-insensitive components.  Such components are attached as such:
 ```
      Sender           Receiver
  _______________   _______________
@@ -61,16 +36,44 @@ to `1` when ready.  To be more clear:
 | d[0..x] (out) |=| d[0..x]  (in) |
 |_______________| |_______________|
 ```
-Above, the Sender waits for Ready to read `1`.  When this occurs, the Sender
-sets Waiting to `1` only after it has data ready on `d[0..x]`.  Waiting and
-`d[0..x]` remain asserted until Ready reads `0`, at which point Waiting is
-de-asserted to `0`.
+A strict handshake protocol ensures transitions on each side follow a state
+machine in which data must be acknowledged seen, then not seen; sent, then
+not sent; and so forth.  This protocol ensures each sender holds the data
+lines stable until the recipient acknowldeges it has a stable copy of the data,
+and only sends data when a recipient *is* ready to receive data.
 
-The Receiver, when ready to receive data, waits for Waiting to read `0`.  When
-this occur, the Receiver asserts Ready as `1` only after it is ready to receive
-new data.  When Waiting reads `1`, the Receiver de-asserts Ready to `0` only
-after it no longer requires the data on `d[0..x]`.
+# NULL Convention Logic
 
-In this way the Sender sends data to the Receiver immediately when the Receiver
-is ready for it.  Two-way or pipeline communication requires two such buses:
-each must send and receive to either one another or some other component.
+Asynchronous components use a form of one-hot logic called NULL Convention
+Logic.  Each bit has one of the following states:
+
+```
+High  Low  Value
+   0    0   NULL
+   1    0      0
+   0    1      1
+```
+
+The `[1 1]` signal is invalid.  Completion detection circuits wait for all
+bits to see `High XOR Low = 1` before signaling the completion of some action.
+
+An adder may indicate its readiness to add data, latch all the data lines when
+acknowledged that data is waiting *and* all data lines are completed
+(i.e. transmitted, `L XOR H = 1`), and *then* remove its `Ready` signal. Then,
+upon completion of all output data lines, it latches those outputs, waits for
+a `Ready` signal from the recipient of the result, and clears its inputs.
+Finally, when it sees all its outputs read `NULL`, it signals `Ready` to the
+component sending it data.
+
+In this way, the adder blocks incoming data on the data bus when not `Ready`
+to do new computations, and accepts new data immediately when it finishes a
+computation.  A computation is finished when it is stored somehow for sending
+to the recipient of the result, and when all outputs from the adder are once
+again `NULL`.
+
+This NULL Convention Logic allows each stage of the adder to output `NULL`
+until it receives a non-`NULL` input (with no handshaking:  the component
+does all the input-output tests and signals other components, and manages
+what is sent to the adder circuit itself).  That in turn allows the adder
+to not propagate computations *until* a signal has validly propagated,
+allowing the component as a whole to detect its own completion state.
