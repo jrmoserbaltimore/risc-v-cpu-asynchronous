@@ -130,21 +130,25 @@ end one_hot_completion_arc;
 --
 -- [A(0) NAND B(0), A(0) AND B(0)]
 architecture one_hot_and of one_hot_logic is
+	signal AComplete, Bcomplete : std_logic;
 begin
+	ACheck: entity work.one_hot_decoder(one_hot_completion_arc)
+	  port map (A      => d;
+		    AValid => output);
+	BCheck: entity work.one_hot_decoder(one_hot_completion_arc)
+	  port map (B      => d;
+		    BValid => output);
 	-- Clear outputs
-	reset: process (A,B)
+	reset: process(all)
 	begin
-		if (A = "00" OR B = "00") then
+		if (NOT (AComplete AND BComplete)) then
 			output <= "00";
 		end if;
 	end process reset;
 
-	compare: process(A,B)
+	compare: process(all)
 	begin
-		-- Wait for [0 1] or [1 0]
-		-- FIXME: replace these with one_hot_completion
-		if ((A(0) XOR A(1) = '1')
-	 	AND (B(0) XOR B(1) = '1')) then
+		if (AComplete AND BComplete) then
 			-- See truth table above
 			output(1) <= A(0) NAND B(0);
 			output(0) <= A(0) AND B(0);
@@ -157,20 +161,25 @@ end architecture one_hot_and;
 --
 -- [A(0) AND B(0), A(0) NAND B(0)]
 architecture one_hot_nand of one_hot_logic is
+	signal AComplete, Bcomplete : std_logic;
 begin
-	reset: process (A,B)
+	ACheck: entity work.one_hot_decoder(one_hot_completion_arc)
+	  port map (A      => d;
+		    AValid => output);
+	BCheck: entity work.one_hot_decoder(one_hot_completion_arc)
+	  port map (B      => d;
+		    BValid => output);
+
+	reset: process(all)
 	begin
-		if (A = "00" OR B = "00") then
+		if (NOT (AComplete AND BComplete)) then
 			output <= "00";
 		end if;
 	end process reset;
 
-	compare: process(A,B)
+	compare: process(all)
 	begin
-		-- Wait for [0 1] or [1 0]
-		-- FIXME: replace these with one_hot_completion
-		if ((A(0) XOR A(1) = '1')
-	 	AND (B(0) XOR B(1) = '1')) then
+		if (AComplete AND BComplete) then
 			-- See truth table above
 			output(1) <= A(0) AND B(0);
 			output(0) <= A(0) NAND B(0);
@@ -198,20 +207,25 @@ end architecture one_hot_nand;
 --
 -- [A(1) AND B(1), A(1) NAND B(1)]
 architecture one_hot_or of one_hot_logic is
+	signal AComplete, BComplete : std_logic;
 begin
-	reset: process (A,B)
+	ACheck: entity work.one_hot_decoder(one_hot_completion_arc)
+	  port map (A      => d;
+		    AValid => output);
+	BCheck: entity work.one_hot_decoder(one_hot_completion_arc)
+	  port map (B      => d;
+		    BValid => output);
+
+	reset: process(all)
 	begin
-		if (A = "00" OR B = "00") then
+		if (NOT (AComplete AND BComplete)) then
 			output <= "00";
 		end if;
 	end process reset;
 
-	compare: process(A,B)
+	compare: process(all)
 	begin
-		-- Wait for [0 1] or [1 0]
-		-- FIXME: replace these with one_hot_completion
-		if ((A(0) XOR A(1) = '1')
-	 	AND (B(0) XOR B(1) = '1')) then
+		if (AComplete AND BComplete) then
 			-- See truth table above
 			output(1) <= A(1) AND B(1);
 			output(0) <= A(1) NAND B(1);
@@ -224,20 +238,25 @@ end architecture one_hot_or;
 --
 -- [A(1) NAND B(1), A(1) AND B(1)]
 architecture one_hot_nor of one_hot_logic is
+	signal AComplete, Bcomplete : std_logic;
 begin
-	reset: process (A,B)
+	ACheck: entity work.one_hot_decoder(one_hot_completion_arc)
+	  port map (A      => d;
+		    AValid => output);
+	BCheck: entity work.one_hot_decoder(one_hot_completion_arc)
+	  port map (B      => d;
+		    BValid => output);
+
+	reset: process(all)
 	begin
-		if (A = "00" OR B = "00") then
+		if (NOT (AComplete AND BComplete)) then
 			output <= "00";
 		end if;
 	end process reset;
 
-	compare: process(A,B)
+	compare: process(all)
 	begin
-		-- Wait for [0 1] or [1 0]
-		-- FIXME: replace these with one_hot_completion
-		if ((A(0) XOR A(1) = '1')
-	 	AND (B(0) XOR B(1) = '1')) then
+		if (AComplete AND BComplete) then
 			-- See truth table above
 			output(1) <= A(1) NAND B(1);
 			output(0) <= A(1) AND B(1);
@@ -267,20 +286,25 @@ end architecture one_hot_nor;
 --
 -- m can equal n.
 architecture one_hot_xor of one_hot_logic is
+	signal AComplete, Bcomplete : std_logic;
 begin
-	reset: process (A,B)
+	ACheck: entity work.one_hot_decoder(one_hot_completion_arc)
+	  port map (A      => d;
+		    AValid => output);
+	BCheck: entity work.one_hot_decoder(one_hot_completion_arc)
+	  port map (B      => d;
+		    BValid => output);
+
+	reset: process(all)
 	begin
-		if (A = "00" OR B = "00") then
+		if (NOT (AComplete AND BComplete)) then
 			output <= "00";
 		end if;
 	end process reset;
 
-	compare: process(A,B)
+	compare: process(all)
 	begin
-		-- Wait for [0 1] or [1 0]
-		-- FIXME: replace these with one_hot_completion
-		if ((A(0) XOR A(1) = '1')
-	 	AND (B(0) XOR B(1) = '1')) then
+		if (AComplete AND BComplete) then
 			-- See truth table above
 			output(1) <= A(0) XNOR B(0);
 			output(0) <= A(0) XOR B(0);
@@ -293,20 +317,25 @@ end architecture one_hot_xor;
 --
 -- [A(n) XOR B(n), A(m) XNOR B(m)]
 architecture one_hot_xnor of one_hot_logic is
+	signal AComplete, Bcomplete : std_logic;
 begin
-	reset: process (A,B)
+	ACheck: entity work.one_hot_decoder(one_hot_completion_arc)
+	  port map (A      => d;
+		    AValid => output);
+	BCheck: entity work.one_hot_decoder(one_hot_completion_arc)
+	  port map (B      => d;
+		    BValid => output);
+
+	reset: process(all)
 	begin
-		if (A = "00" OR B = "00") then
+		if (NOT (AComplete AND BComplete)) then
 			output <= "00";
 		end if;
 	end process reset;
 
-	compare: process(A,B)
+	compare: process(all)
 	begin
-		-- Wait for [0 1] or [1 0]
-		-- FIXME: replace these with one_hot_completion
-		if ((A(0) XOR A(1) = '1')
-	 	AND (B(0) XOR B(1) = '1')) then
+		if (AComplete AND BComplete) then
 			-- See truth table above
 			output(1) <= A(0) XOR B(0);
 			output(0) <= A(0) XNOR B(0);
@@ -314,20 +343,25 @@ begin
 	end process compare;
 end architecture one_hot_xnor;
 
+-- NOT operator
 architecture one_hot_not of one_hot_inverter is
+	signal AComplete : std_logic;
 begin
-	reset: process (A)
+	ACheck: entity work.one_hot_decoder(one_hot_completion_arc)
+	  port map (A      => d;
+		    AValid => output);
+
+	reset: process(all)
 	begin
-		if (A = "00") then
+		if (NOT AComplete) then
 			output <= "00";
 		end if;
 	end process reset;
 
-	invert: process (A)
+	invert: process(all)
 	begin
-		-- Wait for [0 1] or [1 0]
-		if (A(0) XOR A(1) = '1') then
-			output = NOT A;
+		if (AComplete) then
+			output <= NOT A;
 		end if;
 	end process invert;
 end architecture one_hot_not;
