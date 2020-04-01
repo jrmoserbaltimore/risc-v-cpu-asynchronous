@@ -57,23 +57,56 @@ High  Low  Value
 The `[1 1]` signal is invalid.  Completion detection circuits wait for all
 bits to see `High XOR Low = 1` before signaling the completion of some action.
 
-An adder may indicate its readiness to add data, latch all the data lines when
-acknowledged that data is waiting *and* all data lines are completed
-(i.e. transmitted, `L XOR H = 1`), and *then* remove its `Ready` signal. Then,
-upon completion of all output data lines, it latches those outputs, waits for
-a `Ready` signal from the recipient of the result, and clears its inputs.
-Finally, when it sees all its outputs read `NULL`, it signals `Ready` to the
-component sending it data.
+# Asynchronous Process
 
-In this way, the adder blocks incoming data on the data bus when not `Ready`
-to do new computations, and accepts new data immediately when it finishes a
-computation.  A computation is finished when it is stored somehow for sending
-to the recipient of the result, and when all outputs from the adder are once
-again `NULL`.
+The asynchronous process relies on both the handshake and NCL to function.
 
-This NULL Convention Logic allows each stage of the adder to output `NULL`
-until it receives a non-`NULL` input (with no handshaking:  the component
-does all the input-output tests and signals other components, and manages
-what is sent to the adder circuit itself).  That in turn allows the adder
-to not propagate computations *until* a signal has validly propagated,
-allowing the component as a whole to detect its own completion state.
+Consider the below:
+```
+     Sender                   Adder                    Consumer
+ _______________   ______________________________   ______________
+| Ready    (in) |-| Ready   (out)   Ready    (in)|-| Ready  (out) |
+| Waiting (out) |-| Waiting  (in)   Waiting (out)|-| Waiting (in) |
+| d[0..x] (out) |=| d[0..x]  (in)   d[0..x] (out)|=| d[0..x] (in) |
+|_______________| |______________________________| |______________|
+```
+Above, the **Sender** sends a computation to the **Adder**, which sends the
+result to the **Consumer**.
+
+Overall, an asynchronous component has the below general block diagram:
+
+![Asynchronous component block diagram](async_component_block_diagram.png)
+
+Think of the fancy parallel prefix adder as below:
+```
+        [Input]   (in) Waiting,  (Out) Ready
+        |  |  |
+       [Register]
+        |  |  |  * Completion: input
+        G  G  G
+        | /| /|
+        G  G  |
+        | /|  |
+        G  |  |
+      / |  |  | * Completion: output
+     [  Output  ] (Out) Waiting, (In) Ready
+
+```
+The component needs its data input to remain in place until its data output
+is complete and no longer needed by the receiver of this output.  That means
+all circuits must complete before this can propagate down.
+
+The asynchronous register stores the data in a delay-insensitive manner (see
+[the handshake components](handshake/), allowing the handshake to immediately
+finish while the component processes the data.  The component becomes ready
+for new data as soon as the next component has likewise stored the output
+and signaled it has done so (by clearing `Ready`).
+
+This coordination is necessary to ensure asynchronous components do not get
+out of sync and produce bad data.  Clocked circuits assume every component
+does its part in one clock cycle, while asynchronous circuits move data as
+soon as the sender is ready to send and the receiver is ready to receive.
+This can vary with electrical characteristics, temperature, and which
+component is in use—parallel adders, slow multipliers, fast incrementers,
+all with different amounts of delay, and all operating at full speed rather
+than at the speed of the slowest, even when those speeds change.
