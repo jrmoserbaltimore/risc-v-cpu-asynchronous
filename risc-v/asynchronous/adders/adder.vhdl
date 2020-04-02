@@ -31,11 +31,11 @@ use IEEE.std_logic_1164.all;
 -- In architecture, G would be sent to Cout, P sent to MUX.
 entity binary_adder_ncl_entity is
 port(
-    A     : (in)  ncl_logic;
-    B     : (in)  ncl_logic;
-    Cin   : (in)  ncl_logic;
-    Cout  : (out) ncl_logic;
-    S     : (out) ncl_logic
+    A     : in  work.ncl_logic;
+    B     : in  ncl_logic;
+    Cin   : in  ncl_logic;
+    Cout  : out ncl_logic;
+    S     : out ncl_logic
     );
 end binary_adder_ncl_entity;
 
@@ -61,12 +61,12 @@ end binary_adder_ncl_entity;
 --  Gout
 entity binary_adder_pg_mux_ncl_entity is
 port (
-    P     : (in)  ncl_logic;
-    G     : (in)  ncl_logic;
-    Pin   : (in)  ncl_logic;
-    Gin   : (in)  ncl_logic;
-    Pout  : (out) ncl_logic;
-    Gout  : (out) ncl_logic
+    P     : in  ncl_logic;
+    G     : in  ncl_logic;
+    Pin   : in  ncl_logic;
+    Gin   : in  ncl_logic;
+    Pout  : out ncl_logic;
+    Gout  : out ncl_logic
     );
 end binary_adder_pg_mux_ncl_entity;
 
@@ -88,31 +88,9 @@ end binary_adder_pg_mux_ncl_entity;
 -- All computations require NCL-complete input signals and pass
 -- NULL if any signal is incomplete.  This prevents invalid output.
 architecture binary_adder_ncl_fulladder_arch of binary_adder_ncl_entity is
-    signal AComplete, BComplete, CinComplete : std_logic;
-    signal ABLx, ABHx, AllComplete : std_logic;
 begin
-    ACheck: entity work.ncl_completion(ncl_completion_arc)
-      generic map (1      => n);
-      port map (A         => d;
-                AComplete => output);
-
-    BCheck: entity work.ncl_completion(ncl_completion_arc)
-      generic map (1      => n);
-      port map (B         => d;
-                BComplete => output);
-      
-    CinCheck: entity work.ncl_completion(ncl_completion_arc)
-      generic map (1        => n);
-      port map (Cin         => d;
-                CinComplete => output);
-
-    AllComplete <= (AComplete AND BComplete AND CinComplete);
     -- S bit is A XOR B XOR Cin; output NULL if A or B is null
-    ABLx <= (A.L XOR B.L);
-    ABHx <= (A.H XOR B.H);
-    S    <= (L <= (ABLx XOR Cin.L) AND AllComplete,
-	     H <= (ABHx XOR Cin.H) AND AllComplete);
+    S    <= A XOR B XOR Cin;
     -- Cout is (A AND B) OR ((A XOR B) AND Cin); output NULL if null
-    Cout <= (L <= ((ABLx AND Cin.L) OR (A.L AND B.L)) AND AllComplete,
-	     H <= ((ABHx AND Cin.H) OR (A.H AND B.H)) AND AllComplete);
+    Cout <= (A AND B) OR ((A XOR B) AND Cin);
 end binary_adder_ncl_fulladder_arch;
