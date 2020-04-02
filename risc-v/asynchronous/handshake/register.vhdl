@@ -1,4 +1,4 @@
--- vim: sw=4 ts=4 expandtab
+-- vim: sw=4 ts=4 et
 -- NCL Buffer Register
 --
 -- INTEGRATION, the VLSI Journal, 59 (2017), 31-41,
@@ -19,16 +19,18 @@
 -- reliable register storage without clock.
 library IEEE;
 use IEEE.std_logic_1164.all;
+use work.ncl.all;
 
-entity ncl_dff is
+entity ncl_dff_array is
+    generic ( n: positive );
     port (
-    D       : (in)  ncl_logic;
-    EN, CLR : (in)  std_logic;
-    Q       : (out) ncl_logic;
+        D       : in  ncl_logic_vector(n-1 downto 0);
+        EN, CLR : in  std_logic;
+        Q       : out ncl_logic_vector(n-1 downto 0)
     );
-end ncl_dff;
+end ncl_dff_array;
 
-architecture a_ncl_dff of ncl_dff is
+architecture a_ncl_dff_array of ncl_dff_array is
 begin
     -- A regular D Flip-Flop follows a clock.
     -- This one follows EN and D both: EN means
@@ -36,15 +38,15 @@ begin
     -- continuously change state.
     dff: process(all)
     begin
-        -- Activating both is not valid!
-        if (EN) then
+        -- Activating both is not valid! In practice, favors CLR
+        if (CLR) then
+            -- Clear Q to all NULL regardless of D
+            Q <= (others <= (H <= '0', L <= '0'));
+        elsif (EN) then
             Q <= D;
-        elsif (CLR) then
-            -- Clear Q regardless of D
-            Q <= '0';
         end if;
     end process dff;
-end ncl_dff;
+end a_ncl_dff_array;
 
 -- Registered logic for wide bus
 --
@@ -52,75 +54,29 @@ end ncl_dff;
 -- on the DFF.
 --
 -- When D=Q and D is NCL-complete and W<='1', 
-entity ncl_logic_registered is
+entity ncl_logic_register is
     generic ( n: positive );
     port (
-        D          : (in)  ncl_logic(n-1 downto 0);
+        D          : in  ncl_logic_vector(n-1 downto 0);
         -- Receiver R and W, that is, Ready(out) Waiting(in)
-        R, W, CLR  : (in)  std_logic;
-        Q          : (out) ncl_logic(n-1 downto 0);
-        Ready      : (out) std_logic;
+        R, W, CLR  : in  std_logic;
+        Q          : out ncl_logic_vector(n-1 downto 0);
+        Stored     : out std_logic
     );
-end ncl_logic_registered;
+end ncl_logic_register;
 
-architecture a_ncl_logic_registered of ncl_logic_registered is
-    -- Input and output are equal (i.e. the input is stored)
-    signal dQ_eq             : std_logic_vector(n-1 downto 0);
-    -- r AND ncl-complete input
-    signal in_ready_complete : std_logic;
+-- n-bit delay-insensitive asynchronous register
+architecture a_ncl_logic_register of ncl_logic_register is
+    -- On when time to enable the DFF array
+    signal en_dff            : std_logic;
 begin
-    d_ff : entity work.ncl_dff(a_ncl_dff)
-end a_ncl_logic_registered;
-
-entity ncl_register is
-    generic ( bitwidth: positive );
-    port(
-    D          : (in)  ncl_logic(n-1 downto 0);
-    -- Handshake R (out) and W (in) for receiver
-    R, W, CLR  : (in)  std_logic;
-    Q          : (out) ncl_logic(n-1 downto 0);
-    Stored     : (out) std_logic);
-    );
-end ncl_register;
-
-architecture a_ncl_register of ncl_register is
-    -- ncl_dff input (D) and output (Q) are equal
-    -- (i.e. the input signal is stored)
-    signal dQ_eq           : std_logic_vector(n-1 downto 0);
-    -- r AND ncl-complete input
-    signal en_dff          : std_logic;
-    signal in_completion   : std_logic_vector(n-1 downto 0);
-    -- ncl-complete input AND D and Q equal
-    signal eq_and_complete : std_logic;
-    -- w AND D and Q equal AND ncl-complete
-    signal w_and_ready     : std_logic;
-    -- Interception
-    signal Qout            : ncl_logic(n-1 downto 0);
-begin
-    generate_register:
-    for i in d'RANGE generate
-        dffx: entity ncl_dff(a_ncl_dff)
-        port map( D(i)   => D,
+    dff_array : entity ncl_dff_array(a_ncl_dff_array)
+    generic map ( n      => n )
+    port map    ( D      => D,
                   en_dff => EN,
-                  -- CLR is just forwarded straight to the DFF
                   CLR    => CLR,
-                  Q(i)   => Qout(i));
-    end generate generate_register;
-
-    ncl_completion: entity ncl_completion(ncl_completion_arc)
-    generic map (   n => bitwidth );
-    port map (      D => D,
-               output => in_completion);    
-
-    -- Unary AND operator checks for all bits AND all others
-    eq_and_complete <= '1' when (AND dQ_eq = '1')
-                           AND (AND in_completion = '1') else
-                       '0';
-    -- XXX: should EN only activate when in_completion check
-    -- passes?  Removing it has the virtue of filling the dff
-    -- while waiting for completion on the input, which is
-    -- faster.
-    --
+                  Q      => Q);
+   
     -- Handshake protocol allows data in at all times, but
     -- only stores it when R=1, and only sets R=0 when W=1 AND
     -- the data has been stored (i.e. once the data-in lines
@@ -131,28 +87,15 @@ begin
     -- set CLR <= '0' and R <= '1'.  This creates a glitch
     -- wherein R propagates more slowly than CLR, so we ignore
     -- R when CLR is set.
-    en_dff          <= '1' WHEN R = '1'
-                           AND CLR = '0' else
-                       '0';
-    -- Data is stored.
     --
-    -- This only goes to '1' when the data lines are non-NULL
-    -- AND the sender has set W='1'.  It tells the circuit we
-    -- can set R <= '0' safely. 
-    Stored          <= W AND eq_and_complete;
-    -- Just connect this (fugly?)
-    Q               <= Qout;
+    -- Adding AND NOT Stored would tend to cut off EN just
+    -- slightly earlier: Stored <= '1' has to propagate for
+    -- R <= '0', which has to propagate through the AND gate
+    -- to set EN <= '0'.
+    en_dff <= '1' when R AND (NOT CLR) else
+              '0';
 
-    process(all)
-    begin
-        -- When the flip-flop becomes enabled--in essence,
-        -- when R = '1'--we start checking for 
-        if (en_dff = '1')
-            for i in d'RANGE loop
-                dQ_eq(i) = '1' when D(i) = Qout(i) else
-                           '0';
-            end loop;
-        end if;
-    end process;
-
-end a_ncl_register;
+    -- D and Q must be distinct signals
+    Stored <= '1' when ncl_not_null(D) AND (D = Q) AND W = '1' else
+              '0';
+end a_ncl_logic_register;
