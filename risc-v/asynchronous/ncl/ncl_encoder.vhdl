@@ -19,8 +19,8 @@ begin
     process(all)
     begin
         for i in input'range loop
-            d(i)(H) <= NOT input(i);
-            d(i)(L) <= input(i);
+            d(i).H  <= NOT input(i);
+            d(i).L. <= input(i);
         end loop;
     end process;
 end ncl_encoder_arc;

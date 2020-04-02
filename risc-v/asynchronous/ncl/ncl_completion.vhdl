@@ -32,7 +32,7 @@ begin
     process(all)
     begin
         for i in input'range loop
-            output(i) <= d(i)(L) XOR d(i)(H);
+            output(i) <= d(i).L XOR d(i).H;
         end loop;
     end process;
 end ncl_completion_arc;

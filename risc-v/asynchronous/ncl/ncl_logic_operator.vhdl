@@ -33,8 +33,8 @@ end ncl_logic_operator;
 -- Note when '0' or '1', the low bit is the decoded value.
 --  Therefor, all logic is:
 --
---    H <= A(L) N<operator> B(L),
---    L <= A(L) <operator>  B(L)
+--    H <= A.L N<operator> B.L,
+--    L <= A.L <operator>  B.L
 architecture ncl_and of ncl_logic_operator is
     signal AComplete, Bcomplete : ncl_logic(n-1 downto 0);
 begin
@@ -49,10 +49,14 @@ begin
 
     compare: process(all)
     begin
+	-- Basically (A.L NAND B.L)
+	--       AND (A.L XOR A.H)
+	--       AND (B.L XOR B.H)
+	-- gives the high bit.
         for i in A'range loop
             if (AComplete(i) AND BComplete(i)) then
-                output(i) <= (H=>A(L) NAND B(L),
-                              L=>A(L) AND  B(L));
+                output(i) <= (H=>A.L NAND B.L,
+                              L=>A.L AND  B.L);
             else
                 -- Output [0 0] on any incomplete inputs.
                 -- Downstream circuit should wait for completion
@@ -79,8 +83,8 @@ begin
     begin
         for i in A'range loop
             if (AComplete(i) AND BComplete(i)) then
-                output(i) <= (H=>A(L) AND  B(L),
-                              L=>A(L) NAND B(L));
+                output(i) <= (H=>A.L AND  B.L,
+                              L=>A.L NAND B.L);
             else -- [0 0]
                 output(i) <= (H=>'0', L=>'0');
             end if;
@@ -105,8 +109,8 @@ begin
     begin
         for i in A'range loop
             if (AComplete(i) AND BComplete(i)) then
-                output(i) <= (H=>A(L) NOR B(L),
-                              L=>A(L) OR  B(L));
+                output(i) <= (H=>A.L NOR B.L,
+                              L=>A.L OR  B.L);
             else -- [0 0]
                 output(i) <= (H=>'0', L=>'0');
             end if;
@@ -131,8 +135,8 @@ begin
     begin
         for i in A'range loop
             if (AComplete(i) AND BComplete(i)) then
-                output(i) <= (H=>A(L) OR  B(L),
-                              L=>A(L) NOR B(L));
+                output(i) <= (H=>A.L OR  B.L,
+                              L=>A.L NOR B.L);
             else -- [0 0]
                 output(i) <= (H=>'0', L=>'0');
             end if;
@@ -157,8 +161,8 @@ begin
     begin
         for i in A'range loop
             if (AComplete(i) AND BComplete(i)) then
-                output(i) <= (H=>A(L) XNOR B(L),
-                              L=>A(L) XOR  B(L));
+                output(i) <= (H=>A.L XNOR B.L,
+                              L=>A.L XOR  B.L);
             else -- [0 0]
                 output(i) <= (H=>'0', L=>'0');
             end if;
@@ -183,8 +187,8 @@ begin
     begin
         for i in A'range loop
             if (AComplete(i) AND BComplete(i)) then
-                output(i) <= (H=>A(L) XOR  B(L),
-                              L=>A(L) XNOR B(L));
+                output(i) <= (H=>A.L XOR  B.L,
+                              L=>A.L XNOR B.L);
             else -- [0 0]
                 output(i) <= (H=>'0', L=>'0');
             end if;

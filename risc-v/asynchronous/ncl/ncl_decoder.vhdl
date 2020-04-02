@@ -38,7 +38,7 @@ begin
     begin
         for i in input'range loop
             if (dCompletion(i)) then
-                output(i) <= d(i)(L);
+                output(i) <= d(i).L;
             else
                 output(i) <= 'U';
             end if;

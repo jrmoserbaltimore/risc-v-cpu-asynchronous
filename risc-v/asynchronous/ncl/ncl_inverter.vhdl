@@ -25,8 +25,8 @@ begin
     begin
         for i in A'range loop
             if (AComplete(i)) then
-                output(i) <= (H=>NOT A(i)(H),
-                              L=>NOT A(i)(L));
+                output(i) <= (H=>NOT A(i).H,
+                              L=>NOT A(i).L);
             else -- [0 0]
                 output(i) <= (H=>'0', L=>'0');
             end if;

@@ -35,7 +35,7 @@ port(
     B     : (in)  ncl_logic;
     Cin   : (in)  ncl_logic;
     Cout  : (out) ncl_logic;
-    S     : (out) ncl_logic;
+    S     : (out) ncl_logic
     );
 end binary_adder_ncl_entity;
 
@@ -66,9 +66,9 @@ port (
     Pin   : (in)  ncl_logic;
     Gin   : (in)  ncl_logic;
     Pout  : (out) ncl_logic;
-    Gout  : (out) ncl_logic;
+    Gout  : (out) ncl_logic
     );
-end binary_adder_pg_mux_entity;
+end binary_adder_pg_mux_ncl_entity;
 
 -- A simple full adder.
 --
