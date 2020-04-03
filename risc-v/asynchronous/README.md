@@ -25,6 +25,27 @@ Above, a transceiver operates as a clocked (synchronous) component and an
 unclocked (asynchronous) component.  The asynchronous side experiences delay
 controlled by the clock, but uses the asynchronous protocol.
 
+Marcos Luiggi Lemos Sartori of the Pontifical Catholic University of Rio
+Grande do Sul once [wrote](https://www.inf.pucrs.br/~calazans/publications/2017_MarcosSartori_EoTW.pdf):
+
+> As far as the Author knows, this is both the first asynchronous RISC-V
+> implementation and the first use of Go as a hardware description language.
+
+The [ARV implementation](https://github.com/marlls1989/arv) appears to be a
+RISC-V emulator written in Go, although the author notes:
+
+> A smart asynchronous synthesis tool can extract the intended behaviour
+> from the high level model and implement it in any such template.
+
+So far as we are aware, the VHDL implementation presented here is the first
+asynchronous RISC-V CPU hardware implementation, and the first using unbroken
+NULL Convention Logic to implement delay-insensitive components.  This CPU
+requires transceivers at every memory access point, including to access any
+BRAM used as cache, DRAM used as main memory, or internal DSP and multiplier
+facilities; this may be faster in many cases than a synthesized implementation,
+but a full VHDL implementation synthesizable as an ASIC or an FPGA core is
+our preferred target.
+
 # Handshake
 
 A completion-detection handshake allows for delay-insensitive components.  Such components are attached as such:
