@@ -39,12 +39,17 @@ RISC-V emulator written in Go, although the author notes:
 
 So far as we are aware, the VHDL implementation presented here is the first
 asynchronous RISC-V CPU hardware implementation, and the first using unbroken
-NULL Convention Logic to implement delay-insensitive components.  This CPU
-requires transceivers at every memory access point, including to access any
-BRAM used as cache, DRAM used as main memory, or internal DSP and multiplier
-facilities; this may be faster in many cases than a synthesized implementation,
-but a full VHDL implementation synthesizable as an ASIC or an FPGA core is
-our preferred target.
+NULL Convention Logic to implement delay-insensitive components.  Unlike
+[previous work by Christensen, Jensen, Jorger, and Sparsø](https://backend.orbit.dtu.dk/ws/portalfiles/portal/4361393/Christensen.pdf), which implemented
+an asynchronous TinyRISC™ TR41401 via delay elements, the RISC-V implementation
+here uses NULL Convention Logic (NCL) and delay-insensitive registers to
+overcome timing issues.
+
+This CPU requires transceivers at every memory access point, including to
+access any BRAM used as cache, DRAM used as main memory, or internal DSP and
+multiplier facilities.  It provides a full VHDL implementation of all
+facilities except internal cache to facilitate synthesization as an ASIC;
+configurable support for internal use of FPGA facilities is included.
 
 # Handshake
 
