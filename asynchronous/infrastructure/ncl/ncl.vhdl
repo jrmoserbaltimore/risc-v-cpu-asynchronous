@@ -52,6 +52,9 @@ package ncl is
     function "xor"  (l, r: ncl_logic_vector) return ncl_logic_vector;
     function "xnor" (l, r: ncl_logic_vector) return ncl_logic_vector;
     function "not"  (l   : ncl_logic_vector) return ncl_logic_vector;
+    -- Comparators
+    function "="    (l, r: ncl_logic) return boolean;
+    function "="    (l, r: ncl_logic, std_logic) return boolean;
 end;
 
 package body ncl is
@@ -229,4 +232,22 @@ package body ncl is
         end loop;
         return dout;
     end function;
+
+    -- Comparators
+    function "="    (l, r: ncl_logic) return boolean is
+    begin
+        if (ncl_is_null(l) or ncl_is_null(r) or (l.L /= r.L)) then
+            return false;
+        end if;
+        return true;
+    end function;
+
+    function "="    (l, r: ncl_logic, std_logic) return boolean is
+    begin
+        if (ncl_is_null(l) or (l.L /= r)) then
+            return false;
+        end if;
+        return true;
+    end function;
+
 end package body;
