@@ -75,7 +75,7 @@ package body ncl is
 
     function ncl_encode (d : std_logic) return ncl_logic is
     begin
-        return (L <= d, H <= NOT d);
+        return (H <= NOT d, L <= d);
     end function;
 
     function ncl_encode (d : std_logic_vector) return ncl_logic_vector is
@@ -110,7 +110,8 @@ package body ncl is
 
     -- For all logical functions, the low bit is the logical
     -- operator applied to the low bits, and the high bit is
-    -- the inverse applied to the high bits.
+    -- the inverse applied to the high bits (or the low bit
+    -- inverted).
     --
     -- If either is NULL, return NULL.
     function "and" (l, r : ncl_logic) return ncl_logic is
@@ -118,7 +119,7 @@ package body ncl is
         if (ncl_is_null(l) OR ncl_is_null(r)) then
             return (H<='0', L<='0');
         end if;
-        return (L<= l.L AND r.L, H<= l.H NAND r.H);
+        return ncl_encode(l.L AND r.L);
     end function;
 
     function "nand" (l, r : ncl_logic) return ncl_logic is
@@ -126,7 +127,7 @@ package body ncl is
         if (ncl_is_null(l) OR ncl_is_null(r)) then
             return (H<='0', L<='0');
         end if;
-        return (L<= l.L NAND r.L, H<= l.H AND r.H);
+        return ncl_encode(l.L NAND r.L);
     end function;
 
     function "or" (l, r : ncl_logic) return ncl_logic is
@@ -134,7 +135,7 @@ package body ncl is
         if (ncl_is_null(l) OR ncl_is_null(r)) then
             return (H<='0', L<='0');
         end if;
-        return (L<= l.L OR r.L, H<= l.H NOR r.H);
+        return ncl_encode(l.L OR r.L);
     end function;
 
     function "nor" (l, r : ncl_logic) return ncl_logic is
@@ -142,7 +143,7 @@ package body ncl is
         if (ncl_is_null(l) OR ncl_is_null(r)) then
             return (H<='0', L<='0');
         end if;
-        return (L<= l.L NOR r.L, H<= l.H OR r.H);
+        return ncl_encode(l.L NOR r.L);
     end function;
 
     function "xor" (l, r : ncl_logic) return ncl_logic is
@@ -150,7 +151,7 @@ package body ncl is
         if (ncl_is_null(l) OR ncl_is_null(r)) then
             return (H<='0', L<='0');
         end if;
-        return (L<= l.L XOR r.L, H<= l.H XNOR r.H);
+        return ncl_encode(l.L XOR r.L);
     end function;
 
     function "xnor" (l, r : ncl_logic) return ncl_logic is
@@ -158,7 +159,7 @@ package body ncl is
         if (ncl_is_null(l) OR ncl_is_null(r)) then
             return (H<='0', L<='0');
         end if;
-        return (L<= l.L XNOR r.L, H<= l.H XOR r.H);
+        return ncl_encode(l.L XNOR r.L);
     end function;
 
     function "not" (l    : ncl_logic) return ncl_logic is
@@ -166,7 +167,7 @@ package body ncl is
         if (ncl_is_null(l)) then
             return (H<='0', L<='0');
         end if;
-        return (L<= NOT l.L, H<= NOT l.H);
+        return ncl_encode(NOT l.L);
     end function;
 
     -- Above functions on arrays
