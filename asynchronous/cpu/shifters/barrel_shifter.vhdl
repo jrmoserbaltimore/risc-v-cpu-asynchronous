@@ -54,13 +54,15 @@ use ieee.math_real."log2";
 -- 6 for 64-bit, 7 for 128-bit.
 entity e_barrel_shifter_ncl is
 -- Only feed this a power of 2!
-    generic map ( n : positive );
+    generic map ( n       : positive,
+                 BitWidths: positive);
     port(
-        Din     : in  ncl_logic_vector(n-1 downto 0);
+        Din        : in  ncl_logic_vector(n-1 downto 0);
         Shift   : in  ncl_logic_vector(integer(ceil(log2(real(n))))-1 downto 0);
-        ShRight : in  ncl_logic;
+        ShRight    : in  ncl_logic;
         Arithmetic : in ncl_logic;
-        Dout    : out ncl_logic_vector(n-1 downto 0)
+        BitWidth   : in ncl_logic (BitWidths-1 downto 0);
+        Dout       : out ncl_logic_vector(n-1 downto 0)
     );
 end e_barrel_shifter_ncl;
 
@@ -74,6 +76,7 @@ architecture a_barrel_shifter_ncl of e_barrel_shifter_ncl is
     type tree_array is array (Shift'RANGE) of ncl_logic_vector(n-1 downto 0);
     signal tree : tree_array := (others => (H<='0', L<='0'));
     signal SignEx : ncl_logic;
+    signal result : ncl_logic_vector(n-1 downto 0);
 begin
     --  SignBit Arithmetic
     --        | |
@@ -124,14 +127,19 @@ begin
                                                 OR (Din(Din'HIGH - (j-2**i))
                                                     AND Shift(i));
                         end if;
-                    elsif (i = Shift'HIGH) then
+                    -- Warning:  cleverness.  Never a good thing.
+                    elsif (BitWidth(Shift'HIGH - i) = '1') then
                         -- Final row, already handled if the shift bit is on.
                         -- Reverse back to normal if shifting right.
                         if (ShRight = '0') then
-                            Dout <= tree_array(i-1)(j);
+                            result <= tree_array(i-1)(j);
                         elsif (ShRight = '1') then
-                            Dout <= tree_array(i-1)(Din'HIGH - j);
+                            result <= tree_array(i-1)(Din'HIGH - j);
                         end if;
+                        -- now slice it if it's a smaller bitrange
+                        Dout <= (others <= SignEx);
+                        Dout(BitWidth / (2**(Shift'High - i)) downto 0) <=
+                            result(BitWidth / (2**(Shift'HIGH - i)) downto 0);
                     else
                         if (j <= 2**i) then
                             -- Sign-extend
