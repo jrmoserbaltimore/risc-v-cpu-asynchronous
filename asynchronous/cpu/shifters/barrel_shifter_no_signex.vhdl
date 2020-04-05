@@ -1,7 +1,7 @@
 -- vim: ts=4 sw=4 et
 -- Barrel shifter
 --
--- n-bit NCL barrel shifter.
+-- n-bit NCL barrel shifter.  Cannot do arithmetic (sign extension)
 library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.math_real."ceil";
@@ -59,6 +59,10 @@ end e_barrel_shifter_ncl;
 
 -- All computations require NCL-complete input signals and pass
 -- NULL if any signal is incomplete.  This prevents invalid output.
+--
+-- This barrel shifter is reversible by using n muxes on input and
+-- output to reverse the bit order (reverse input, shift left,
+-- reverse output).
 architecture a_barrel_shifter_ncl of e_barrel_shifter_ncl is
     type tree_array is array (Shift'RANGE) of ncl_logic_vector(n-1 downto 0);
     signal tree : tree_array := (others => (H<='0', L<='0'));
