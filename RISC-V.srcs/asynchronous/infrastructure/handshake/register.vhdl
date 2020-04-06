@@ -21,16 +21,16 @@ library IEEE;
 use IEEE.std_logic_1164.all;
 use work.ncl.all;
 
-entity ncl_dff_array is
+entity e_ncl_dff_array is
     generic ( n: positive );
     port (
         D       : in  ncl_logic_vector(n-1 downto 0);
         EN, CLR : in  std_logic;
         Q       : out ncl_logic_vector(n-1 downto 0)
     );
-end ncl_dff_array;
+end e_ncl_dff_array;
 
-architecture a_ncl_dff_array of ncl_dff_array is
+architecture ncl_dff_array of e_ncl_dff_array is
 begin
     -- A regular D Flip-Flop follows a clock.
     -- This one follows EN and D both: EN means
@@ -41,20 +41,23 @@ begin
         -- Activating both is not valid! In practice, favors CLR
         if (CLR) then
             -- Clear Q to all NULL regardless of D
-            Q <= (others <= (H <= '0', L <= '0'));
+            Q <= (others => ('0', '0'));
         elsif (EN) then
             Q <= D;
         end if;
     end process dff;
-end a_ncl_dff_array;
+end ncl_dff_array;
 
+library IEEE;
+use IEEE.std_logic_1164.all;
+use work.ncl.all;
 -- Registered logic for wide bus
 --
 -- When R<='1' and D is NCL-complete, EN is activated
 -- on the DFF.
 --
 -- When D=Q and D is NCL-complete and W<='1', 
-entity ncl_logic_register is
+entity e_ncl_logic_register is
     generic ( n: positive );
     port (
         D          : in  ncl_logic_vector(n-1 downto 0);
@@ -63,17 +66,19 @@ entity ncl_logic_register is
         Q          : out ncl_logic_vector(n-1 downto 0);
         Stored     : out std_logic
     );
-end ncl_logic_register;
+end e_ncl_logic_register;
 
+use work.e_ncl_dff_array;
+use work.ncl.all;
 -- n-bit delay-insensitive asynchronous register
-architecture a_ncl_logic_register of ncl_logic_register is
+architecture ncl_logic_register of e_ncl_logic_register is
     -- On when time to enable the DFF array
     signal en_dff            : std_logic;
 begin
-    dff_array : entity ncl_dff_array(a_ncl_dff_array)
+    dff_array: entity e_ncl_dff_array(ncl_dff_array)
     generic map ( n      => n )
     port map    ( D      => D,
-                  en_dff => EN,
+                  EN     => en_dff,
                   CLR    => CLR,
                   Q      => Q);
    
@@ -96,6 +101,6 @@ begin
               '0';
 
     -- D and Q must be distinct signals
-    Stored <= '1' when ncl_not_null(D) AND (D = Q) AND W = '1' else
+    Stored <= '1' when (NOT ncl_is_null(D)) AND (D = Q) AND W = '1' else
               '0';
-end a_ncl_logic_register;
+end ncl_logic_register;

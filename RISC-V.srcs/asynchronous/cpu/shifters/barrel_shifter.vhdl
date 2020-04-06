@@ -6,6 +6,8 @@ library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.math_real."ceil";
 use ieee.math_real."log2";
+library async_ncl;
+use async_ncl.ncl.all;
 
 -- NCL 2:1 mux
 --
@@ -54,14 +56,14 @@ use ieee.math_real."log2";
 -- 6 for 64-bit, 7 for 128-bit.
 entity e_barrel_shifter_ncl is
 -- Only feed this a power of 2!
-    generic map ( n       : positive,
-                 BitWidths: positive);
+    generic ( n       : positive;
+              BitWidths: positive);
     port(
         Din        : in  ncl_logic_vector(n-1 downto 0);
         Shift   : in  ncl_logic_vector(integer(ceil(log2(real(n))))-1 downto 0);
         ShRight    : in  ncl_logic;
         Arithmetic : in ncl_logic;
-        BitWidth   : in ncl_logic (BitWidths-1 downto 0);
+        BitWidth   : in ncl_logic_vector(BitWidths-1 downto 0);
         Dout       : out ncl_logic_vector(n-1 downto 0)
     );
 end e_barrel_shifter_ncl;
@@ -72,9 +74,9 @@ end e_barrel_shifter_ncl;
 -- This barrel shifter is reversible by using n muxes on input and
 -- output to reverse the bit order (reverse input, shift left,
 -- reverse output).
-architecture a_barrel_shifter_ncl of e_barrel_shifter_ncl is
+architecture barrel_shifter_ncl of e_barrel_shifter_ncl is
     type tree_array is array (Shift'RANGE) of ncl_logic_vector(n-1 downto 0);
-    signal tree : tree_array := (others => (H<='0', L<='0'));
+    signal tree : tree_array := (others => (others => ('0', '0')));
     signal SignEx : ncl_logic;
     signal result : ncl_logic_vector(n-1 downto 0);
 begin
@@ -90,20 +92,20 @@ begin
     -- This thing is actually inherently combinatorial
     barrel: process(all) is
     begin
-        if (Shift'HIGH = '1') then
+        if (Shift'HIGH = 1) then
             -- If last shift bit is high, it shifts out to zero, so
             -- just set all output to zero.  Also true if arithmetic.
-            Dout <= (others <= (H <= '0', L <= '0'));
+            Dout <= (others => ('0','0'));
         else
             for i in Shift'RANGE loop
                 for j in Din'RANGE loop
                     -- First row from Din
-                    if (i = '0' and ShRight = '0') then
+                    if (i = 0 and ShRight = '0') then
                         -- Shift left
                         if (j <= 2**i) then
                             -- SignEx is always zero here anyway.
                             -- SignEx
-                            tree_array(i)(j) <=    (Din(j) AND NOT Shift(i))
+                            tree_array(i)(j) <= (Din(j) AND NOT Shift(i))
                                                 OR (SignEx AND Shift(i));
                         else
                             -- If shift bit not on, take this column;
@@ -111,7 +113,7 @@ begin
                             tree_array(i)(j) <=    (Din(j) AND NOT Shift(i))
                                                 OR (Din(j-2**i) AND Shift(i));
                         end if;
-                    elsif (i = '0' and ShRight = '1') then
+                    elsif (i = 0 and ShRight = '1') then
                         -- Shift right
                         if (j <= 2**i) then
                             -- First row from Din, reversed
@@ -137,7 +139,7 @@ begin
                             result <= tree_array(i-1)(Din'HIGH - j);
                         end if;
                         -- now slice it if it's a smaller bitrange
-                        Dout <= (others <= SignEx);
+                        Dout <= (others => SignEx);
                         Dout(BitWidth / (2**(Shift'High - i)) downto 0) <=
                             result(BitWidth / (2**(Shift'HIGH - i)) downto 0);
                     else
@@ -159,4 +161,4 @@ begin
             end loop;
         end if;
     end process barrel;
-end a_barrel_shifter_ncl;
+end barrel_shifter_ncl;

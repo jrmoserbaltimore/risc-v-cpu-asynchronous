@@ -3,6 +3,8 @@
 -- These are parts of adders
 library IEEE;
 use IEEE.std_logic_1164.all;
+library async_ncl;
+use async_ncl.ncl.all;
 
 -- Binary adder
 --
@@ -31,7 +33,7 @@ use IEEE.std_logic_1164.all;
 -- In architecture, G would be sent to Cout, P sent to MUX.
 entity binary_adder_ncl_entity is
 port(
-    A     : in  work.ncl_logic;
+    A     : in  ncl_logic;
     B     : in  ncl_logic;
     Cin   : in  ncl_logic;
     Cout  : out ncl_logic;
@@ -39,6 +41,10 @@ port(
     );
 end binary_adder_ncl_entity;
 
+library IEEE;
+use IEEE.std_logic_1164.all;
+library async_ncl;
+use async_ncl.ncl.all;
 -- There are two forms of this.  All but the last for a given
 -- bit are as follows:
 --

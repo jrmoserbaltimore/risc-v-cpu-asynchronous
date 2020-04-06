@@ -31,6 +31,8 @@ package ncl is
     -- NULL check
     function ncl_is_null(d : ncl_logic)        return std_logic;
     function ncl_is_null(d : ncl_logic_vector) return std_logic_vector;
+    function ncl_is_null(d : ncl_logic)        return boolean;
+    function ncl_is_null(d : ncl_logic_vector) return boolean;
     -- Encoder and decoder
     function ncl_encode (d : std_logic)        return ncl_logic;
     function ncl_encode (d : std_logic_vector) return ncl_logic_vector;
@@ -54,7 +56,7 @@ package ncl is
     function "not"  (l   : ncl_logic_vector) return ncl_logic_vector;
     -- Comparators
     function "="    (l, r: ncl_logic) return boolean;
-    function "="    (l, r: ncl_logic, std_logic) return boolean;
+    function "="    (l  : ncl_logic; r: std_logic) return boolean;
 end;
 
 package body ncl is
@@ -73,9 +75,26 @@ package body ncl is
         return dout;
     end function;
 
+    function ncl_is_null(d: ncl_logic) return boolean is
+    begin
+        -- Any result that's not '1' is not non-NULL
+        return (d.H XNOR d.L) /= '1';
+    end function;
+    
+    function ncl_is_null(d : ncl_logic_vector) return boolean is
+    begin
+        for i in d'RANGE loop
+            -- True if anything in here is null
+            if (ncl_is_null(d(i))) then
+                return true;
+            end if;
+        end loop;
+        return false;
+    end function;
+    
     function ncl_encode (d : std_logic) return ncl_logic is
     begin
-        return (H <= NOT d, L <= d);
+        return (H => NOT d, L => d);
     end function;
 
     function ncl_encode (d : std_logic_vector) return ncl_logic_vector is
@@ -117,7 +136,7 @@ package body ncl is
     function "and" (l, r : ncl_logic) return ncl_logic is
     begin
         if (ncl_is_null(l) OR ncl_is_null(r)) then
-            return (H<='0', L<='0');
+            return (H=>'0', L=>'0');
         end if;
         return ncl_encode(l.L AND r.L);
     end function;
@@ -125,7 +144,7 @@ package body ncl is
     function "nand" (l, r : ncl_logic) return ncl_logic is
     begin
         if (ncl_is_null(l) OR ncl_is_null(r)) then
-            return (H<='0', L<='0');
+            return (H=>'0', L=>'0');
         end if;
         return ncl_encode(l.L NAND r.L);
     end function;
@@ -133,7 +152,7 @@ package body ncl is
     function "or" (l, r : ncl_logic) return ncl_logic is
     begin
         if (ncl_is_null(l) OR ncl_is_null(r)) then
-            return (H<='0', L<='0');
+            return (H=>'0', L=>'0');
         end if;
         return ncl_encode(l.L OR r.L);
     end function;
@@ -141,7 +160,7 @@ package body ncl is
     function "nor" (l, r : ncl_logic) return ncl_logic is
     begin
         if (ncl_is_null(l) OR ncl_is_null(r)) then
-            return (H<='0', L<='0');
+            return (H=>'0', L=>'0');
         end if;
         return ncl_encode(l.L NOR r.L);
     end function;
@@ -149,7 +168,7 @@ package body ncl is
     function "xor" (l, r : ncl_logic) return ncl_logic is
     begin
         if (ncl_is_null(l) OR ncl_is_null(r)) then
-            return (H<='0', L<='0');
+            return (H=>'0', L=>'0');
         end if;
         return ncl_encode(l.L XOR r.L);
     end function;
@@ -157,7 +176,7 @@ package body ncl is
     function "xnor" (l, r : ncl_logic) return ncl_logic is
     begin
         if (ncl_is_null(l) OR ncl_is_null(r)) then
-            return (H<='0', L<='0');
+            return (H=>'0', L=>'0');
         end if;
         return ncl_encode(l.L XNOR r.L);
     end function;
@@ -165,7 +184,7 @@ package body ncl is
     function "not" (l    : ncl_logic) return ncl_logic is
     begin
         if (ncl_is_null(l)) then
-            return (H<='0', L<='0');
+            return (H=>'0', L=>'0');
         end if;
         return ncl_encode(NOT l.L);
     end function;
@@ -175,7 +194,7 @@ package body ncl is
         variable dout : ncl_logic_vector(l'RANGE);
     begin
         for i in l'RANGE loop
-            dout(i) := l(i) AND r(i));
+            dout(i) := l(i) AND r(i);
         end loop;
         return dout;
     end function;
@@ -184,7 +203,7 @@ package body ncl is
         variable dout : ncl_logic_vector(l'RANGE);
     begin
         for i in l'RANGE loop
-            dout(i) := l(i) NAND r(i));
+            dout(i) := l(i) NAND r(i);
         end loop;
         return dout;
     end function;
@@ -193,7 +212,7 @@ package body ncl is
         variable dout : ncl_logic_vector(l'RANGE);
     begin
         for i in l'RANGE loop
-            dout(i) := l(i) OR r(i));
+            dout(i) := l(i) OR r(i);
         end loop;
         return dout;
     end function;
@@ -202,7 +221,7 @@ package body ncl is
         variable dout : ncl_logic_vector(l'RANGE);
     begin
         for i in l'RANGE loop
-            dout(i) := l(i) NOR r(i));
+            dout(i) := l(i) NOR r(i);
         end loop;
         return dout;
     end function;
@@ -211,7 +230,7 @@ package body ncl is
         variable dout : ncl_logic_vector(l'RANGE);
     begin
         for i in l'RANGE loop
-            dout(i) := l(i) XOR r(i));
+            dout(i) := l(i) XOR r(i);
         end loop;
         return dout;
     end function;
@@ -220,7 +239,7 @@ package body ncl is
         variable dout : ncl_logic_vector(l'RANGE);
     begin
         for i in l'RANGE loop
-            dout(i) := l(i) XNOR r(i));
+            dout(i) := l(i) XNOR r(i);
         end loop;
         return dout;
     end function;
@@ -229,7 +248,7 @@ package body ncl is
         variable dout : ncl_logic_vector(l'RANGE);
     begin
         for i in l'RANGE loop
-            dout(i) := NOT l(i));
+            dout(i) := NOT l(i);
         end loop;
         return dout;
     end function;
@@ -243,7 +262,7 @@ package body ncl is
         return true;
     end function;
 
-    function "="    (l, r: ncl_logic, std_logic) return boolean is
+    function "="    (l: ncl_logic; r: std_logic) return boolean is
     begin
         if (ncl_is_null(l) or (l.L /= r)) then
             return false;
