@@ -62,8 +62,8 @@ entity e_barrel_shifter_ncl is
         Din        : in  ncl_logic_vector(n-1 downto 0);
         Shift   : in  ncl_logic_vector(integer(ceil(log2(real(n))))-1 downto 0);
         ShRight    : in  ncl_logic;
-        Arithmetic : in ncl_logic;
-        BitWidth   : in ncl_logic_vector(BitWidths-1 downto 0);
+        Arithmetic : in  ncl_logic;
+        BitWidth   : in  ncl_logic_vector(BitWidths-1 downto 0);
         Dout       : out ncl_logic_vector(n-1 downto 0)
     );
 end e_barrel_shifter_ncl;
@@ -75,90 +75,137 @@ end e_barrel_shifter_ncl;
 -- output to reverse the bit order (reverse input, shift left,
 -- reverse output).
 architecture barrel_shifter_ncl of e_barrel_shifter_ncl is
-    type tree_array is array (Shift'RANGE) of ncl_logic_vector(n-1 downto 0);
+    type tree_array is array (Shift'HIGH downto SHIFT'LOW-1) of ncl_logic_vector(n-1 downto 0);
     signal tree : tree_array := (others => (others => ('0', '0')));
     signal SignEx : ncl_logic;
     signal result : ncl_logic_vector(n-1 downto 0);
 begin
-    --  SignBit Arithmetic
-    --        | |
-    --        AND ShRight
-    --          | |
-    --          AND
-    --           |
-    --          All shifted-out MUXes
-    SignEx <= Din(Din'HIGH) AND Arithmetic AND ShRight;
-
+    
     -- This thing is actually inherently combinatorial
     barrel: process(all) is
+    variable BWNumeric : integer := 0;
+    variable MSBidx    : integer := n-1;
     begin
-        if (Shift'HIGH = 1) then
+        -- Find the bit divisor
+        -- If the MSB in BitWidth is set, then use full width.
+        -- If MSB-1 is set, half width.
+        -- If MSB-2, quarter width.
+        -- So on.
+        --
+        -- This works by returning 0, 1, and 2, respectively,
+        -- for the three above.  2**0 = 1, 2**1 = 2, 2**2 = 4.
+        -- This gives us both results. 
+        for i in BitWidth'HIGH downto BitWidth'LOW loop
+            if (BitWidth(i) = '1') then
+                BWNumeric := BitWidth'HIGH - i;
+                exit;
+            end if;
+        end loop;
+        
+        -- Figure out the index of the most significant bit
+        --
+        -- e.g. RV128I and we're doing a 32-bit shift:
+        --   BitWidth = "001"
+        --   BWHigh   = 2 - 0 = 2
+        --   Din(((127+1) / (2^^2)) - 1)
+        --     = Din((128 / 4) - 1)
+        --     = Din(31)   -- i.e. (31 downto 0) 
+        MSBidx := ((Din'HIGH+1) / (2**BWNumeric)) - 1;
+ 
+        --  SignBit Arithmetic
+        --        | |
+        --        AND ShRight
+        --          | |
+        --          AND
+        --           |
+        --          All shifted-out MUXes
+        --
+        -- NULL if any of these are NULL, so incorporates the
+        -- ShRight check.
+        SignEx          <= Din(MSBidx) AND Arithmetic AND ShRight;
+
+        if (ncl_is_null(BitWidth) OR ncl_is_null(SignEx)) then
+             -- if we don't check this, we might just use BWNumeric
+             -- as derived above erroneously and get bad results.
+             -- Same if we never check Arithmetic and ShRight.
+             --
+             -- Until then we null the top of the tree, since no
+             -- actual combinatorial circuit along the way CHECKS
+             -- if BitWidth is null, and so will produce spurious
+             -- non-null output otherwise.
+             tree(-1) <= (others => ('0','0'));
+        elsif (Shift(Shift'HIGH - BWNumeric) = '1') then
             -- If last shift bit is high, it shifts out to zero, so
             -- just set all output to zero.  Also true if arithmetic.
-            Dout <= (others => ('0','0'));
+            --
+            -- Fun fact: no matter what the input, this is the
+            -- result; so it's actually reasonable to drop the
+            -- Ready signal and tell the component sending the
+            -- shift that you've received the data as soon as
+            -- Shift() has that bit on.
+            --
+            -- This also applies in lower XLEN, such as when
+            -- a 64-bit processor running in 32-bit mode 
+            -- or calling a 32-bit shift sets bit 6 rather.
+            -- For narrower BitWidth, this does exactly that,
+            -- e.g. 1/4 width BWNumeric = 2, so instead of
+            -- bit 8 in 128-bit, we check bit 6 (32-bit)
+            --
+            -- THIS IS A 0 OUTPUT, NOT A NULL OUTPUT.
+            Dout <= (others => ncl_encode('0'));
         else
-            for i in Shift'RANGE loop
+            if (ShRight = '0') then
+                -- Put Din into the top of the tree to avoid breaking out special
+                -- handling for the first row.  The "top" is basically tree(-1).
+                tree(Shift'LOW-1) <= Din;
+            elsif (ShRight = '1') then
+                -- Put it in backwards.  This should just be a row of muxes.
                 for j in Din'RANGE loop
-                    -- First row from Din
-                    if (i = 0 and ShRight = '0') then
-                        -- Shift left
-                        if (j <= 2**i) then
-                            -- This is a left shift, so no sign extension
-                            -- SignEx is always zero here anyway.
-                            tree(i)(j) <=    (Din(j) AND NOT Shift(i));
-                                       --   OR (SignEx AND Shift(i));
-                        else
-                            -- If shift bit not on, take this column;
-                            -- if shift bit on, take the column 2**i right
-                            tree(i)(j) <=    (Din(j) AND NOT Shift(i))
-                                          OR (Din(j-2**i) AND Shift(i));
-                        end if;
-                    elsif (i = 0 and ShRight = '1') then
-                        -- Shift right
-                        if (j <= 2**i) then
-                            -- First row from Din, reversed
-                            -- Possibly sign-extend
-                            tree(i)(j) <=    (Din(Din'HIGH - j)
-                                              AND NOT Shift(i))
-                                          OR ((SignEx) AND Shift(i));
-                        else
-                            -- If shift bit not on, take this column;
-                            -- if shift bit on, take the column 2**i to the right
-                            tree(i)(j) <=    (Din(Din'HIGH - j)
-                                              AND NOT Shift(i))
-                                          OR (Din(Din'HIGH - (j-2**i))
-                                              AND Shift(i));
-                        end if;
-                    -- Warning:  cleverness.  Never a good thing.
-                    elsif (BitWidth(Shift'HIGH - i) = '1') then
-                        -- Final row, already handled if the shift bit is on.
-                        -- Reverse back to normal if shifting right.
-                        if (ShRight = '0') then
-                            result <= tree(i-1);
-                        elsif (ShRight = '1') then
-                            result(j) <= tree(i-1)(Din'HIGH - j);
-                        end if;
-                        -- now slice it if it's a smaller bitrange
-                        Dout <= (others => SignEx);
-                        Dout(BitWidth / (2**(Shift'High - i)) downto 0) <=
-                            result(BitWidth / (2**(Shift'HIGH - i)) downto 0);
+                    
+                    -- Assign Din(0) to tree(-1)(127)
+                    -- Assign SignEx to tree(-1)(32) when we're using 32-bit
+                    -- instructions or modes on 64-bit or 128-bit platforms
+                    -- etc.
+                    --
+                    -- Accordingly, we want the most significant bit down.
+                    tree(Shift'LOW-1)(Din'HIGH - j) <=      SignEx WHEN j > MSBidx
+                                                       ELSE Din(j);
+                end loop;
+            end if;
+
+            -- It's going to compute them all in parallel;
+            -- combinatorial logic is not any faster by using
+            -- j in MSBidx downto 0            
+            for i in Shift'HIGH - BWNumeric downto Shift'LOW loop
+                for j in Din'RANGE loop
+                    if (j <= 2**i) then
+                        -- Sign-extend
+                        -- This will actually test the Arithmetic and
+                        -- ShRight bits for non-NULL status.
+                        tree(i)(j) <=    (tree(i-1)(j) AND NOT Shift(i))
+                                            OR (SignEx AND Shift(i));
                     else
-                        if (j <= 2**i) then
-                            -- Sign-extend
-                            tree_array(i)(j) <=    (tree_array(i-1)(j)
-                                                    AND NOT Shift(i))
-                                                OR (SignEx AND Shift(i));
-                        else
-                            -- If shift bit not on, take this column;
-                            -- if shift on, take the column 2**i to the right
-                            tree_array(i)(j) <=    (tree_array(i-1)(j)
-                                                    AND NOT Shift(i))
-                                                OR (tree_array(i-1)(j-2**i)
-                                                    AND Shift(i));
-                        end if;
+                        -- This part will NOT check Arithmetic or
+                        -- ShRight, which can lead to spurious outputs in
+                        -- contrived situations given valid input and handshake,
+                        -- hence the explicit SignEx NULL check above. 
+                        --
+                        -- If shift bit not on, take this column;
+                        -- if shift on, take the column 2**i to the right
+                        tree(i)(j) <=    (tree(i-1)(j) AND NOT Shift(i))
+                                            OR (tree(i-1)(j-2**i) AND Shift(i));
                     end if;
                 end loop;
             end loop;
+            if (ShRight = '0') then
+                -- Shift left doesn't care about the rest of the register
+                Dout <= tree(Shift'HIGH - BWNumeric);
+            else
+                -- We have to reverse the lowest bits below MSBidx.
+                for j in MSBidx downto 0 loop
+                    Dout(MSBidx - j) <= tree(Shift'HIGH - BWNumeric)(j);
+                end loop;
+            end if;
         end if;
     end process barrel;
 end barrel_shifter_ncl;
