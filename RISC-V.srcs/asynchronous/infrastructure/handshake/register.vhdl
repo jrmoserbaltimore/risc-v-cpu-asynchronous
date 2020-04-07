@@ -17,9 +17,18 @@
 -- and three AND gates.  This circuit specifically
 -- interfaces with our handshake protocol and allows
 -- reliable register storage without clock.
+--
+-- In a sane world, this would be defined in async_ncl,
+-- and we could either have an architecture instantiate
+-- a component defined in the async_ncl package as
+-- being the entity(architecture) pair.  VHDL as-is
+-- is analogous to pinouts being defined and sockets
+-- being sold, but nobody sells the chips or any
+-- design for the chips, so you have to make it yourself.  
 library IEEE;
 use IEEE.std_logic_1164.all;
-use work.ncl.all;
+library async_ncl;
+use async_ncl.ncl.all;
 
 entity e_ncl_dff_array is
     generic ( n: positive );
@@ -50,7 +59,8 @@ end ncl_dff_array;
 
 library IEEE;
 use IEEE.std_logic_1164.all;
-use work.ncl.all;
+library async_ncl;
+use async_ncl.ncl.all;
 -- Registered logic for wide bus
 --
 -- When R<='1' and D is NCL-complete, EN is activated
@@ -69,7 +79,8 @@ entity e_ncl_logic_register is
 end e_ncl_logic_register;
 
 use work.e_ncl_dff_array;
-use work.ncl.all;
+library async_ncl;
+use async_ncl.ncl.all;
 -- n-bit delay-insensitive asynchronous register
 architecture ncl_logic_register of e_ncl_logic_register is
     -- On when time to enable the DFF array
