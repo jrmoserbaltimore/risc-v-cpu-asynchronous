@@ -103,40 +103,40 @@ begin
                     if (i = 0 and ShRight = '0') then
                         -- Shift left
                         if (j <= 2**i) then
+                            -- This is a left shift, so no sign extension
                             -- SignEx is always zero here anyway.
-                            -- SignEx
-                            tree_array(i)(j) <= (Din(j) AND NOT Shift(i))
-                                                OR (SignEx AND Shift(i));
+                            tree(i)(j) <=    (Din(j) AND NOT Shift(i));
+                                       --   OR (SignEx AND Shift(i));
                         else
                             -- If shift bit not on, take this column;
                             -- if shift bit on, take the column 2**i right
-                            tree_array(i)(j) <=    (Din(j) AND NOT Shift(i))
-                                                OR (Din(j-2**i) AND Shift(i));
+                            tree(i)(j) <=    (Din(j) AND NOT Shift(i))
+                                          OR (Din(j-2**i) AND Shift(i));
                         end if;
                     elsif (i = 0 and ShRight = '1') then
                         -- Shift right
                         if (j <= 2**i) then
                             -- First row from Din, reversed
                             -- Possibly sign-extend
-                            tree_array(i)(j) <=    (Din(Din'HIGH - j)
-                                                    AND NOT Shift(i))
-                                                OR ((SignEx) AND Shift(i));
+                            tree(i)(j) <=    (Din(Din'HIGH - j)
+                                              AND NOT Shift(i))
+                                          OR ((SignEx) AND Shift(i));
                         else
                             -- If shift bit not on, take this column;
                             -- if shift bit on, take the column 2**i to the right
-                            tree_array(i)(j) <=    (Din(Din'HIGH - j)
-                                                    AND NOT Shift(i))
-                                                OR (Din(Din'HIGH - (j-2**i))
-                                                    AND Shift(i));
+                            tree(i)(j) <=    (Din(Din'HIGH - j)
+                                              AND NOT Shift(i))
+                                          OR (Din(Din'HIGH - (j-2**i))
+                                              AND Shift(i));
                         end if;
                     -- Warning:  cleverness.  Never a good thing.
                     elsif (BitWidth(Shift'HIGH - i) = '1') then
                         -- Final row, already handled if the shift bit is on.
                         -- Reverse back to normal if shifting right.
                         if (ShRight = '0') then
-                            result <= tree_array(i-1)(j);
+                            result <= tree(i-1);
                         elsif (ShRight = '1') then
-                            result <= tree_array(i-1)(Din'HIGH - j);
+                            result(j) <= tree(i-1)(Din'HIGH - j);
                         end if;
                         -- now slice it if it's a smaller bitrange
                         Dout <= (others => SignEx);
