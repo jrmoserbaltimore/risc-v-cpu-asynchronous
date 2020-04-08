@@ -56,15 +56,15 @@ use async_ncl.ncl.all;
 -- 6 for 64-bit, 7 for 128-bit.
 entity e_barrel_shifter_ncl is
 -- Only feed this a power of 2!
-    generic ( n       : positive;
-              BitWidths: positive);
+    generic ( XLEN      : positive;
+              BitWidths : positive);
     port(
-        Din        : in  ncl_logic_vector(n-1 downto 0);
-        Shift   : in  ncl_logic_vector(integer(ceil(log2(real(n))))-1 downto 0);
+        Din        : in  ncl_logic_vector(XLEN-1 downto 0);
+        Shift   : in  ncl_logic_vector(integer(ceil(log2(real(XLEN))))-1 downto 0);
         ShRight    : in  ncl_logic;
         Arithmetic : in  ncl_logic;
         BitWidth   : in  ncl_logic_vector(BitWidths-1 downto 0);
-        Dout       : out ncl_logic_vector(n-1 downto 0)
+        Dout       : out ncl_logic_vector(XLEN-1 downto 0)
     );
 end e_barrel_shifter_ncl;
 
@@ -75,16 +75,16 @@ end e_barrel_shifter_ncl;
 -- output to reverse the bit order (reverse input, shift left,
 -- reverse output).
 architecture barrel_shifter_ncl of e_barrel_shifter_ncl is
-    type tree_array is array (Shift'HIGH downto SHIFT'LOW-1) of ncl_logic_vector(n-1 downto 0);
+    type tree_array is array (Shift'HIGH downto SHIFT'LOW-1) of ncl_logic_vector(XLEN-1 downto 0);
     signal tree : tree_array := (others => (others => ('0', '0')));
     signal SignEx : ncl_logic;
-    signal result : ncl_logic_vector(n-1 downto 0);
+    signal result : ncl_logic_vector(XLEN-1 downto 0);
 begin
     
     -- This thing is actually inherently combinatorial
     barrel: process(all) is
     variable BWNumeric : integer := 0;
-    variable MSBidx    : integer := n-1;
+    variable MSBidx    : integer := XLEN-1;
     begin
         -- Find the bit divisor
         -- If the MSB in BitWidth is set, then use full width.
