@@ -133,6 +133,25 @@ package body ncl is
     -- inverted).
     --
     -- If either is NULL, return NULL.
+    
+    -- The AND circuit should look like this:
+    --
+    -- AH AL-   -BL BH
+    --  | |  | |  | |
+    --  XOR  | |  XOR
+    --   |   | |   |
+    --   |   AND   |
+    --   |   | |   |
+    --   | NOT |   |
+    --   |   | |   |
+    --    ---|-|-AND
+    --       | |   |
+    --      -|-|---+
+    --     | | |   |
+    --     AND AND-
+    --       | |
+    --      OH OL
+    --
     function "and" (l, r : ncl_logic) return ncl_logic is
     begin
         if (ncl_is_null(l) OR ncl_is_null(r)) then
@@ -181,12 +200,10 @@ package body ncl is
         return ncl_encode(l.L XNOR r.L);
     end function;
 
+    -- The inverter is special:  just swap the signals.
     function "not" (l    : ncl_logic) return ncl_logic is
     begin
-        if (ncl_is_null(l)) then
-            return (H=>'0', L=>'0');
-        end if;
-        return ncl_encode(NOT l.L);
+            return (H=>l.L, L=>l.H);
     end function;
 
     -- Above functions on arrays
@@ -226,7 +243,7 @@ package body ncl is
         return dout;
     end function;
 
-    function "XOR" (l, r : ncl_logic_vector) return ncl_logic_vector is
+    function "xor" (l, r : ncl_logic_vector) return ncl_logic_vector is
         variable dout : ncl_logic_vector(l'RANGE);
     begin
         for i in l'RANGE loop
@@ -235,7 +252,7 @@ package body ncl is
         return dout;
     end function;
 
-    function "XNOR" (l, r : ncl_logic_vector) return ncl_logic_vector is
+    function "xnor" (l, r : ncl_logic_vector) return ncl_logic_vector is
         variable dout : ncl_logic_vector(l'RANGE);
     begin
         for i in l'RANGE loop
