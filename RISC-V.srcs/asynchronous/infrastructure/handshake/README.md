@@ -114,3 +114,52 @@ correct and processing it—a severe data hazard.
 Altogether, the handshake protocol and the delay-insensitive NCL
 registers provide for asynchronous data transfer between internal
 components.
+
+# Example:  Logical NOT
+
+The below circuit implements the receiver and sender handshake, a
+one-bit delay-insensitive register, and a logical NOT (which
+requires no gates itself:  the signals are connected to inverse
+output).
+
+![Delay-Insensitev Logical NOT](ncl_async_logical_not.png)
+
+The NCL completion check occurs several times in larger circuits:
+```
+ -AH AL-
+|  | |  |
+|  XOR  |
+|  _|_  |
+| |   | |
+AND   AND
+  |   |
+ AH   AL
+```
+This check uses one XOR gate and two AND gates per one NCL bit
+and is effectively a specialized four-to-two mux selecting
+between `[AH, AL]` when `AH XOR AL = 1` and `[0 0]` when
+`AH XOR AL = 0`.
+
+This component can wrap around other components:
+```
+  AH AL-   -BL BH
+   | |  | |  | |
+   XOR  | |  XOR
+    |   | |   |
+    |   AND   |
+    |   | |   |
+    | NOT |   |
+    |   | |   |
+     -AND AND-
+        | |
+       OH OL
+```
+The above performs a logical `AND` of two bits `A` and `B`,
+outputting `NULL` when either input is `NULL`.  The same
+circuit will be needed around the next component in the
+event the `XOR` signals propagate befor the `AND`, causing
+the `NOT` to output a signal when the `AND` gate is
+receiving invalid input.  This is unlikely, but
+mathematically possible in the event the signal propagates
+through the central `AND` gate later than it does from the
+peripheral `XOR` gates.
