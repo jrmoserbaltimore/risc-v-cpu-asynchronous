@@ -72,7 +72,8 @@ entity e_ncl_logic_register is
     port (
         D          : in  ncl_logic_vector(n-1 downto 0);
         -- Receiver R and W, that is, Ready(out) Waiting(in)
-        R, W, CLR  : in  std_logic;
+        -- EN should usually come from the sender handshake
+        EN, W, CLR : in  std_logic;
         Q          : out ncl_logic_vector(n-1 downto 0);
         Stored     : out std_logic
     );
@@ -108,7 +109,7 @@ begin
     -- slightly earlier: Stored <= '1' has to propagate for
     -- R <= '0', which has to propagate through the AND gate
     -- to set EN <= '0'.
-    en_dff <= '1' when R AND (NOT CLR) else
+    en_dff <= '1' when EN AND (NOT CLR) else
               '0';
 
     -- D and Q must be distinct signals

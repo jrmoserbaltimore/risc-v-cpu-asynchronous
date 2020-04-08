@@ -38,10 +38,12 @@ library async_ncl;
 use async_ncl.ncl.all;
 
 entity e_ncl_handshake_sender is
+    generic ( n : positive );
 	port(
 	    Ready     : in  std_logic;
-	    -- Enable "Waiting" output
-	    En        : in  std_logic;
+	    -- Output data
+	    Dout      : in  ncl_logic_vector(n-1 downto 0);
+	    -- Waiting signal
 	    Waiting   : out std_logic
     );
 end e_ncl_handshake_sender;
@@ -56,70 +58,41 @@ entity e_ncl_handshake_receiver is
         Ready    : out std_logic;
         -- Enable "Ready" output
         En       : in  std_logic;
-        Waiting  : in  std_logic
+        Waiting  : in  std_logic;
+        EnOut    : Out std_logic
     );
 end e_ncl_handshake_receiver;
 
--- Kind of useless
 architecture ncl_handshake_sender of e_ncl_handshake_sender is
+    signal data_complete : std_logic;
+    signal data_flushed  : std_logic;
+    signal data_complete_a : std_logic_vector(Dout'RANGE);
 begin
-    -- Only raise Waiting when the cicruit has indicated doing
-    -- so will not cause erroneous state AND when the Ready
-    -- signal is sent by the recipient.
-    --
-    -- Waiting will be suppressed until the recipient sends
-    -- Ready.
+    -- Track when outgoing data is all not null
+    data_complete <= NOT (OR ncl_is_null(Dout));
     
-    -- ONLY when Waiting is '0', it will transition to '1'
-    -- when both the receiver is ready to receive AND the
-    -- circuit (sender) has indicated readiness to send.
-    handshake_sender: process(all) is
-    begin
-        if (Waiting = '0') then
-            -- ONLY when Waiting is off:
-            -- Other circuit is ready AND this circuit is
-            -- is ready to send.
-            --
-            -- State change:  R=1, W=0, En=1 => W=1
-            Waiting <= Ready AND En;
-        elsif (Waiting = '1') then
-            -- ONLY when Waiting is being sent:
-            -- Other circuit is no longer ready AND this
-            -- circuit has stopped enabling Send.
-            --
-            -- This requires En to drop before Waiting
-            -- will drop, otherwise Ready can immediately
-            -- come back before En drops and cause error.
-            --
-            -- State change: R=0, W=1, En=0 => W=0
-            Waiting <= NOT (Ready OR En);
-        end if;
-    end process handshake_sender;
+    -- Track when absolutely every outgoing data LINE is '0'
+    G1: for i in Dout'RANGE generate
+        data_complete_a(i) <= Dout(i).H OR Dout(i).L;
+    end generate G1;
+    data_flushed  <= NOT (OR data_complete_a);
+
+    -- Signal data is waiting when receiver is Ready AND
+    -- our data lines are complete;
+    --
+    -- Keep signaling data is waiting until our data
+    -- lines are flushed.
+    --
+    -- Circuit must NOT alter incoming data UNTIL the
+    -- incoming READY signal is dropped!
+    Waiting <=    (Ready   AND data_complete)
+               OR (Waiting AND data_flushed);
 end ncl_handshake_sender;
 
 architecture ncl_handshake_receiver of e_ncl_handshake_receiver is
 begin
-    Ready   <= NOT Waiting;
-    
-    handshake_receiver: process(all) is
-    begin
-        if (Ready = '0') then
-            -- ONLY when Ready is off:
-            -- Other circuit does not have data waiting on the bus
-            -- AND this circuit (receiver) is ready to receive data.
-            --
-            -- State change: R=0, W=0, En=1 => R=1
-            Ready <= (NOT Waiting) AND En;
-        elsif (Ready = '1') then
-            -- ONLY when Ready is being sent:
-            -- Other circuit is no longer ready AND this
-            -- circuit has stopped enabling Send.
-            --
-            -- This requires En to drop before Ready will
-            -- drop AND Waiting to be high.
-            --
-            -- State change: R=1, W=1, En=0 => R=0
-            Ready <= (NOT Waiting) OR En;
-        end if;
-    end process handshake_receiver;
+    -- Waiting MUST only transition from 0 to 1 when sending Ready!
+    -- En should be 1 when ready for new data.
+    EnOut   <= Ready AND Waiting AND En; 
+    Ready   <= (Waiting NOR (NOT En)) OR (Waiting AND En);
 end ncl_handshake_receiver;
