@@ -4,8 +4,10 @@ library IEEE;
 use IEEE.std_logic_1164.all;
 library async_ncl;
 use async_ncl.ncl.all;
+use work.e_ncl_logic_register;
+use work.e_riscv_insn_async_2reg_infra;
 
-entity e_riscv_i_async_bitmask is
+entity e_riscv_insn_async_2reg is
     generic ( XLEN : positive );
     port (
         -- Receiver port and handshake
@@ -19,18 +21,50 @@ entity e_riscv_i_async_bitmask is
         Rs   : in  std_logic;
         Ws   : out std_logic
     );
-end e_riscv_i_async_bitmask;
+end e_riscv_insn_async_2reg;
 
-architecture riscv_i_async_bitmask of e_riscv_i_async_bitmask is
-    alias opcode : ncl_logic_vector(6 downto 0)  is insn(6 downto 0);
+architecture riscv_i_async_bitmask of e_riscv_insn_async_2reg is
+    signal Din   : ncl_logic_vector( (rs1'LENGTH
+                                    + rs2'LENGTH
+                                    + insn'LENGTH)-1 downto 0);
+    -- Buffered into a delay-insensitive register
+    signal in_buffer : ncl_logic_vector( (  rs1'LENGTH
+                                          + rs2'LENGTH
+                                          + insn'LENGTH)-1 downto 0);
+
+    signal r_rs1  : ncl_logic_vector(rs1'RANGE);
+    signal r_rs2  : ncl_logic_vector(rs2'RANGE);
+    signal r_insn : ncl_logic_vector(insn'RANGE);
+
+    -- Data extracted from the buffered instruction
+    alias opcode : ncl_logic_vector(6 downto 0)  is r_insn(6 downto 0);
     -- I-type immediate value
-    alias imm    : ncl_logic_vector(11 downto 0) is insn(31 downto 20);
+    alias imm    : ncl_logic_vector(11 downto 0) is r_insn(31 downto 20);
     -- R-type
-    alias funct7 : ncl_logic_vector(6 downto 0)  is insn(31 downto 25);
-    alias funct3 : ncl_logic_vector(2 downto 0)  is insn(14 downto 12);
+    alias funct7 : ncl_logic_vector(6 downto 0)  is r_insn(31 downto 25);
+    alias funct3 : ncl_logic_vector(2 downto 0)  is r_insn(14 downto 12);
     -- opcode is 0010011 if I-type, 0110011 if R-type
-    alias rtype  : ncl_logic is insn(5); 
+    alias rtype  : ncl_logic is r_insn(5);
 begin
+
+    -- DI registered buffer 
+    r_infra: entity e_riscv_insn_async_2reg_infra(riscv_insn_async_2reg_infra)
+        generic map (XLEN => XLEN)
+        port map
+        (rs1   => rs1,
+         rs2   => rs2,
+         insn  => insn,
+         Rr    => Rr,
+         Wr    => Wr,
+         Rs    => Rs,
+         Ws    => Ws,
+         -- Buffered registers
+         rs1b  => r_rs1,
+         rs2b  => r_rs2,
+         insnb => r_insn,
+         -- send output to 2reg infrastructure
+         rdl   => Dout 
+        );
 
     -- TODO:
     -- instantiate an ncl_logic_register of length
@@ -46,7 +80,7 @@ begin
             -- R-type opcode
             if ((funct3(2) AND funct3(1) AND funct3(0)) = ncl_encode('1')) then
                 -- funct3 = 111 is AND              
-                Dout <= rs1 AND rs2;
+                Dout <= r_rs1 AND r_rs2;
             elsif (    ((funct3(2) AND funct3(1)) = ncl_encode('1'))
                    AND (funct3(0) = ncl_encode('0'))) then
                 -- funct3 = 110 = or
@@ -92,5 +126,5 @@ begin
             -- NULL output
             Dout <= (others => (others => '0'));
         end if;
-    end process bitmask; 
+    end process bitmask;
 end riscv_i_async_bitmask;

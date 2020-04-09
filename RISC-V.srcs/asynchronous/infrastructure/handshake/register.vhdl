@@ -30,6 +30,7 @@ use IEEE.std_logic_1164.all;
 library async_ncl;
 use async_ncl.ncl.all;
 
+-- TODO:  Use a generate statement rather than dff array
 entity e_ncl_dff_array is
     generic ( n: positive );
     port (
