@@ -30,33 +30,28 @@ use IEEE.std_logic_1164.all;
 library async_ncl;
 use async_ncl.ncl.all;
 
--- TODO:  Use a generate statement rather than dff array
-entity e_ncl_dff_array is
-    generic ( n: positive );
+entity e_ncl_latch is
     port (
-        D       : in  ncl_logic_vector(n-1 downto 0);
+        D       : in  ncl_logic;
         EN, CLR : in  std_logic;
-        Q       : out ncl_logic_vector(n-1 downto 0)
+        Q       : out ncl_logic
     );
-end e_ncl_dff_array;
+end e_ncl_latch;
 
-architecture ncl_dff_array of e_ncl_dff_array is
+architecture ncl_latch of e_ncl_latch is
 begin
-    -- A regular D Flip-Flop follows a clock.
-    -- This one follows EN and D both: EN means
-    -- waiting for state, and will freely and
-    -- continuously change state.
-    dff: process(all)
+
+    latch: process(all)
     begin
         -- Activating both is not valid! In practice, favors CLR
         if (CLR) then
             -- Clear Q to all NULL regardless of D
-            Q <= (others => ('0', '0'));
+            Q <= ('0', '0');
         elsif (EN) then
             Q <= D;
         end if;
-    end process dff;
-end ncl_dff_array;
+    end process latch;
+end ncl_latch;
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -64,8 +59,7 @@ library async_ncl;
 use async_ncl.ncl.all;
 -- Registered logic for wide bus
 --
--- When R<='1' and D is NCL-complete, EN is activated
--- on the DFF.
+-- When R<='1' and D is NCL-complete, EN is activated..
 --
 -- When D=Q and D is NCL-complete and W<='1', 
 entity e_ncl_logic_register is
@@ -80,21 +74,21 @@ entity e_ncl_logic_register is
     );
 end e_ncl_logic_register;
 
-use work.e_ncl_dff_array;
+use work.e_ncl_latch;
 library async_ncl;
 use async_ncl.ncl.all;
 -- n-bit delay-insensitive asynchronous register
 architecture ncl_logic_register of e_ncl_logic_register is
-    -- On when time to enable the DFF array
-    signal en_dff            : std_logic;
+    -- On when time to enable the latch array
+    signal en_latch         : std_logic;
 begin
-    dff_array: entity e_ncl_dff_array(ncl_dff_array)
-    generic map ( n      => n )
-    port map    ( D      => D,
-                  EN     => en_dff,
-                  CLR    => CLR,
-                  Q      => Q);
-   
+    latches: for i in n downto 0 generate
+        latch: entity e_ncl_latch(ncl_latch)
+        port map    ( D      => D(i),
+                      EN     => en_latch,
+                      CLR    => CLR,
+                      Q      => Q(i));
+   end generate;
     -- Handshake protocol allows data in at all times, but
     -- only stores it when R=1, and only sets R=0 when W=1 AND
     -- the data has been stored (i.e. once the data-in lines
@@ -110,8 +104,8 @@ begin
     -- slightly earlier: Stored <= '1' has to propagate for
     -- R <= '0', which has to propagate through the AND gate
     -- to set EN <= '0'.
-    en_dff <= '1' when EN AND (NOT CLR) else
-              '0';
+    en_latch <= '1' when EN AND (NOT CLR) else
+                '0';
 
     -- D and Q must be distinct signals
     Stored <= '1' when (NOT ncl_is_null(D)) AND (D = Q) AND W = '1' else
